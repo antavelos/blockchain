@@ -16,3 +16,7 @@ func apiAddTx(c *gin.Context) {
 
 	c.IndentedJSON(http.StatusCreated, tx)
 }
+
+func apiChain(c *gin.Context) {
+	c.IndentedJSON(http.StatusCreated, blockchain)
+}

@@ -15,23 +15,23 @@ const TxsPerBlock int = 5
 const god = "9e7fb2cd-ddc2-4824-8d87-c0238752255b"
 
 type Transaction struct {
-	Id        string
-	Sender    string
-	Recipient string
-	Amount    float64
+	Id        string  `json:"id"`
+	Sender    string  `json:"sender"`
+	Recipient string  `json:"recipient"`
+	Amount    float64 `json:"amount"`
 }
 
 type Block struct {
-	Idx       int64
-	Timestamp int64
-	Txs       []Transaction
-	PrevHash  []byte
-	Nonce     int64
+	Idx       int64         `json:"idx"`
+	Timestamp int64         `json:"timestamp"`
+	Txs       []Transaction `json:"txs"`
+	PrevHash  []byte        `json:"prevHash"`
+	Nonce     int64         `json:"nonce"`
 }
 
 type Blockchain struct {
-	Blocks []Block
-	TxPool []Transaction
+	Blocks []Block       `json:"block"`
+	TxPool []Transaction `json:"txPool"`
 }
 
 func (bc Blockchain) hasTx(tx Transaction) bool {

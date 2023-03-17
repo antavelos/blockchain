@@ -57,6 +57,8 @@ func main() {
 
 	router := gin.Default()
 	router.POST("/transactions", apiAddTx)
+	router.GET("/blockchain", apiChain)
 
+	// printBlockchain(*blockchain)
 	router.Run("localhost:8080")
 }
