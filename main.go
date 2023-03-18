@@ -54,10 +54,11 @@ func initBlockchain() *Blockchain {
 func main() {
 
 	blockchain = initBlockchain()
+	dbSaveBlockchain(*blockchain)
 
 	router := gin.Default()
 	router.POST("/transactions", apiAddTx)
-	router.GET("/blockchain", apiChain)
+	router.GET("/blockchain", apiGetChain)
 
 	// printBlockchain(*blockchain)
 	router.Run("localhost:8080")

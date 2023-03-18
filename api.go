@@ -12,11 +12,14 @@ func apiAddTx(c *gin.Context) {
 		return
 	}
 
+	blockchain, _ := dbLoadBlockchain()
 	blockchain.addTx(tx)
+	dbSaveBlockchain(*blockchain)
 
 	c.IndentedJSON(http.StatusCreated, tx)
 }
 
-func apiChain(c *gin.Context) {
+func apiGetChain(c *gin.Context) {
+	blockchain, _ := dbLoadBlockchain()
 	c.IndentedJSON(http.StatusCreated, blockchain)
 }
