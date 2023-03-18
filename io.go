@@ -32,8 +32,7 @@ func dbLoadBlockchain() (*Blockchain, error) {
 }
 
 func dbBlockchainExists() bool {
-	if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
-		return false
-	}
-	return true
+	_, err := os.Stat(filename)
+
+	return !errors.Is(err, os.ErrNotExist)
 }

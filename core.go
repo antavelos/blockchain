@@ -2,9 +2,9 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha512"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -32,16 +32,6 @@ type Block struct {
 type Blockchain struct {
 	Blocks []Block       `json:"block"`
 	TxPool []Transaction `json:"txPool"`
-}
-
-func (bc Blockchain) hasTx(tx Transaction) bool {
-	for _, bcTx := range bc.TxPool {
-		if tx.Id == bcTx.Id {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (bc *Blockchain) removeTx(tx Transaction) {
@@ -81,23 +71,32 @@ func (bc *Blockchain) createGenesisBlock() {
 	bc.Blocks = append(bc.Blocks, genesisBlock)
 }
 
-func (bc *Blockchain) addTx(tx Transaction) {
+func (bc *Blockchain) addTx(tx Transaction) (Transaction, error) {
 	if tx.Sender != god && !bc.validateTransaction(tx) {
-		log.Printf("Transaction of %v units from %v to %v is not valid. Sender has not enough units.", tx.Amount, tx.Sender, tx.Recipient)
-		return
+		return Transaction{}, fmt.Errorf(
+			"transaction of %v units from %v to %v is not valid. Sender has not enough units", tx.Amount, tx.Sender, tx.Recipient)
 	}
+	tx.Id = newUuid()
 	bc.TxPool = append(bc.TxPool, tx)
+
+	return tx, nil
 }
 
 func (bc *Blockchain) newBlock() (Block, error) {
-	if len(bc.TxPool) < TxsPerBlock {
-		return Block{}, errors.New("not enough transactions yet to create a block")
+	txPoolLength := len(bc.TxPool)
+
+	if txPoolLength == 0 {
+		return Block{}, errors.New("no pending transactions found")
 	}
 
 	lastBlock := bc.Blocks[len(bc.Blocks)-1]
 
+	txCount := TxsPerBlock
+	if txPoolLength < TxsPerBlock {
+		txCount = txPoolLength
+	}
 	var latestTxs []Transaction
-	for i := 0; i < TxsPerBlock; i++ {
+	for i := 0; i < txCount; i++ {
 		latestTxs = append(latestTxs, bc.TxPool[i])
 	}
 
@@ -123,28 +122,35 @@ func verifyBlock(block Block) bool {
 
 	prefix := []byte(strings.Repeat("0", difficulty))
 
-	if !bytes.Equal(hashed[:difficulty], prefix) {
-		return false
+	return bytes.Equal(hashed[:difficulty], prefix)
+}
+
+func userBalanceFromTransaction(user string, tx Transaction) float64 {
+	if user == tx.Recipient {
+		return tx.Amount
 	}
 
-	return true
+	if user == tx.Sender {
+		return -tx.Amount
+	}
+
+	return 0.0
 }
 
 func (bc Blockchain) validateTransaction(tx Transaction) bool {
 	senderBalance := 0.0
+
+	for _, ptx := range bc.TxPool {
+		senderBalance += userBalanceFromTransaction(tx.Sender, ptx)
+	}
+
 	for _, block := range bc.Blocks {
 		for _, btx := range block.Txs {
-			if tx.Sender == btx.Recipient {
-				senderBalance += btx.Amount
-			}
+			senderBalance += userBalanceFromTransaction(tx.Sender, btx)
 		}
 	}
 
-	if tx.Amount > senderBalance {
-		return false
-	}
-
-	return true
+	return tx.Amount <= senderBalance
 }
 
 func (bc Blockchain) isValid() bool {
@@ -159,14 +165,6 @@ func (bc Blockchain) isValid() bool {
 	}
 
 	return true
-}
-
-func hash(hashable []byte) []byte {
-	hash := sha512.New()
-
-	hash.Write(hashable)
-
-	return hash.Sum(nil)
 }
 
 func hashBlock(block Block) []byte {
