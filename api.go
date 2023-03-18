@@ -23,3 +23,17 @@ func apiGetChain(c *gin.Context) {
 	blockchain, _ := dbLoadBlockchain()
 	c.IndentedJSON(http.StatusCreated, blockchain)
 }
+
+func apiMine(c *gin.Context) {
+	blockchain, _ := dbLoadBlockchain()
+
+	block, err := blockchain.newBlock()
+	if err != nil {
+		c.IndentedJSON(http.StatusOK, err.Error())
+	} else {
+		blockchain.addBlock(block)
+		dbSaveBlockchain(*blockchain)
+
+		c.IndentedJSON(http.StatusCreated, block)
+	}
+}

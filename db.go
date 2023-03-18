@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"os"
 )
@@ -9,7 +10,7 @@ import (
 const filename = "./blockchain.json"
 
 func dbSaveBlockchain(blockchain Blockchain) error {
-	jsonBlockchain, err := json.Marshal(blockchain)
+	jsonBlockchain, err := json.MarshalIndent(blockchain, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -28,4 +29,11 @@ func dbLoadBlockchain() (*Blockchain, error) {
 	json.Unmarshal(file, &blockchain)
 
 	return &blockchain, nil
+}
+
+func dbBlockchainExists() bool {
+	if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+	return true
 }

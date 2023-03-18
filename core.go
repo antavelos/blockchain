@@ -91,7 +91,7 @@ func (bc *Blockchain) addTx(tx Transaction) {
 
 func (bc *Blockchain) newBlock() (Block, error) {
 	if len(bc.TxPool) < TxsPerBlock {
-		return Block{}, errors.New("Not enough transactions yet to create a block.")
+		return Block{}, errors.New("not enough transactions yet to create a block")
 	}
 
 	lastBlock := bc.Blocks[len(bc.Blocks)-1]
