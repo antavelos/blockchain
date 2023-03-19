@@ -1,6 +1,9 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,6 +32,9 @@ func initBlockchain() *Blockchain {
 }
 
 func main() {
+	port := flag.String("port", "8080", "the nodes port")
+	flag.Parse()
+
 	if !dbBlockchainExists() {
 		blockchain = initBlockchain()
 		dbSaveBlockchain(*blockchain)
@@ -39,5 +45,6 @@ func main() {
 	router.GET("/blockchain", apiGetChain)
 	router.POST("/mine", apiMine)
 
-	router.Run("localhost:8080")
+	host := fmt.Sprintf("localhost:%v", *port)
+	router.Run(host)
 }
