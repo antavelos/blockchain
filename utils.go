@@ -1,4 +1,4 @@
-package main
+package blockchain
 
 import (
 	"crypto/sha512"
@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func newUuid() string {
+func NewUuid() string {
 	return fmt.Sprintf("%v", uuid.New())
 }
 

@@ -1,4 +1,4 @@
-package main
+package blockchain
 
 import (
 	"bytes"
@@ -13,6 +13,10 @@ import (
 const difficulty int = 2
 const TxsPerBlock int = 5
 const god = "9e7fb2cd-ddc2-4824-8d87-c0238752255b"
+
+type Node struct {
+	Host string `json:"host"`
+}
 
 type Transaction struct {
 	Id        string  `json:"id"`
@@ -34,7 +38,7 @@ type Blockchain struct {
 	TxPool []Transaction `json:"txPool"`
 }
 
-func (bc *Blockchain) removeTx(tx Transaction) {
+func (bc *Blockchain) RemoveTx(tx Transaction) {
 	index := -1
 	for i, bcTx := range bc.TxPool {
 		if tx.Id == bcTx.Id {
@@ -48,7 +52,7 @@ func (bc *Blockchain) removeTx(tx Transaction) {
 	}
 }
 
-func (bc *Blockchain) addBlock(block Block) {
+func (bc *Blockchain) AddBlock(block Block) {
 	if !verifyBlock(block) {
 		return
 	}
@@ -56,11 +60,11 @@ func (bc *Blockchain) addBlock(block Block) {
 	bc.Blocks = append(bc.Blocks, block)
 
 	for _, tx := range block.Txs {
-		bc.removeTx(tx)
+		bc.RemoveTx(tx)
 	}
 }
 
-func (bc *Blockchain) createGenesisBlock() {
+func (bc *Blockchain) CreateGenesisBlock() {
 	genesisBlock := Block{
 		Idx:       1,
 		Timestamp: time.Now().UnixMilli(),
@@ -71,18 +75,18 @@ func (bc *Blockchain) createGenesisBlock() {
 	bc.Blocks = append(bc.Blocks, genesisBlock)
 }
 
-func (bc *Blockchain) addTx(tx Transaction) (Transaction, error) {
+func (bc *Blockchain) AddTx(tx Transaction) (Transaction, error) {
 	if tx.Sender != god && !bc.validateTransaction(tx) {
 		return Transaction{}, fmt.Errorf(
 			"transaction of %v units from %v to %v is not valid. Sender has not enough units", tx.Amount, tx.Sender, tx.Recipient)
 	}
-	tx.Id = newUuid()
+	tx.Id = NewUuid()
 	bc.TxPool = append(bc.TxPool, tx)
 
 	return tx, nil
 }
 
-func (bc *Blockchain) newBlock() (Block, error) {
+func (bc *Blockchain) NewBlock() (Block, error) {
 	txPoolLength := len(bc.TxPool)
 
 	if txPoolLength == 0 {
@@ -153,7 +157,7 @@ func (bc Blockchain) validateTransaction(tx Transaction) bool {
 	return tx.Amount <= senderBalance
 }
 
-func (bc Blockchain) isValid() bool {
+func isValid(bc Blockchain) bool {
 	if len(bc.Blocks) == 1 {
 		return true
 	}
@@ -165,6 +169,16 @@ func (bc Blockchain) isValid() bool {
 	}
 
 	return true
+}
+
+func getLastBlock(bc Blockchain) Block {
+	blocksNum := len(bc.Blocks)
+
+	if blocksNum == 0 {
+		return Block{}
+	}
+
+	return bc.Blocks[blocksNum-1]
 }
 
 func hashBlock(block Block) []byte {

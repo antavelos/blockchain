@@ -15,3 +15,5 @@
 # vendor/
 
 blockchain*
+cmd/dns/dns
+cmd/node/node

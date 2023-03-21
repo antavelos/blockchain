@@ -1,25 +1,32 @@
-package main
+package blockchain
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func apiAddTx(c *gin.Context) {
+func ApiAddTx(c *gin.Context) {
 	var tx Transaction
 	if err := c.BindJSON(&tx); err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "invalid input")
 		return
 	}
-	blockchain, _ := dbLoadBlockchain()
 
-	tx, err := blockchain.addTx(tx)
+	blockchain, err := DbLoadBlockchain()
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "blockchain currently not available")
+		return
+	}
+
+	tx, err = blockchain.AddTx(tx)
 	if err != nil {
 		c.IndentedJSON(http.StatusOK, err.Error())
 		return
 	}
 
-	err = dbSaveBlockchain(*blockchain)
+	err = DbSaveBlockchain(*blockchain)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "couldn't update blockchain")
 		return
@@ -28,42 +35,67 @@ func apiAddTx(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, tx)
 }
 
-func apiGetChain(c *gin.Context) {
-	blockchain, err := dbLoadBlockchain()
+func ApiGetChain(c *gin.Context) {
+	blockchain, err := DbLoadBlockchain()
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "blockchain currently not available")
 		return
 	}
+	// nodes, _ := DbLoadNodes()
+	// if err != nil {
+	// 	return errors.New("nodes list not available")
+	// }
 
-	result := map[string]any{
-		"blockchain": blockchain,
-		"blocksNum":  len(blockchain.Blocks),
-		"isValid":    blockchain.isValid(),
-	}
+	// result := map[string]any{
+	// 	"blockchain": *blockchain,
+	// 	"blocksNum":  len(blockchain.Blocks),
+	// 	"isValid":    isValid(*blockchain),
+	// 	"nodes":      nodes,
+	// }
 
-	c.IndentedJSON(http.StatusCreated, result)
+	c.IndentedJSON(http.StatusOK, *blockchain)
 }
 
-func apiMine(c *gin.Context) {
-	blockchain, err := dbLoadBlockchain()
+func ApiMine(c *gin.Context) {
+	blockchain, err := DbLoadBlockchain()
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "blockchain currently not available")
 		return
 	}
 
-	block, err := blockchain.newBlock()
+	block, err := blockchain.NewBlock()
 	if err != nil {
 		c.IndentedJSON(http.StatusOK, err.Error())
 		return
 	}
 
 	// TODO: to be done after network consensus
-	blockchain.addBlock(block)
-	err = dbSaveBlockchain(*blockchain)
+	blockchain.AddBlock(block)
+	err = DbSaveBlockchain(*blockchain)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "couldn't update blockchain")
 		return
 	}
 
 	c.IndentedJSON(http.StatusCreated, block)
+}
+
+func ApiPing(c *gin.Context) {
+
+	var node Node
+	if err := c.BindJSON(&node); err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "invalid input")
+		return
+	}
+	log.Printf("ping from %#v", node.Host)
+
+	err := DbAddNode(node)
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	var nodes []Node
+	nodes, _ = DbLoadNodes()
+
+	c.IndentedJSON(http.StatusOK, nodes)
 }
