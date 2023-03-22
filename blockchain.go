@@ -12,7 +12,6 @@ import (
 
 const difficulty int = 2
 const TxsPerBlock int = 5
-const god = "9e7fb2cd-ddc2-4824-8d87-c0238752255b"
 
 type Node struct {
 	Host string `json:"host"`
@@ -38,7 +37,7 @@ type Blockchain struct {
 	TxPool []Transaction `json:"txPool"`
 }
 
-func (bc *Blockchain) RemoveTx(tx Transaction) {
+func (bc *Blockchain) removeTx(tx Transaction) {
 	index := -1
 	for i, bcTx := range bc.TxPool {
 		if tx.Id == bcTx.Id {
@@ -60,7 +59,7 @@ func (bc *Blockchain) AddBlock(block Block) {
 	bc.Blocks = append(bc.Blocks, block)
 
 	for _, tx := range block.Txs {
-		bc.RemoveTx(tx)
+		bc.removeTx(tx)
 	}
 }
 
@@ -76,11 +75,11 @@ func (bc *Blockchain) CreateGenesisBlock() {
 }
 
 func (bc *Blockchain) AddTx(tx Transaction) (Transaction, error) {
-	if tx.Sender != god && !bc.validateTransaction(tx) {
+	if !bc.validateTransaction(tx) {
 		return Transaction{}, fmt.Errorf(
 			"transaction of %v units from %v to %v is not valid. Sender has not enough units", tx.Amount, tx.Sender, tx.Recipient)
 	}
-	tx.Id = NewUuid()
+	tx.Id = newUuid()
 	bc.TxPool = append(bc.TxPool, tx)
 
 	return tx, nil

@@ -1,8 +1,10 @@
-package blockchain
+package main
 
 import (
 	"encoding/json"
 	"errors"
+
+	bc "github.com/antavelos/blockchain"
 )
 
 // const blockchainFilename = "./blockchain.json"
@@ -11,7 +13,7 @@ import (
 var jsonBlockchain []byte
 var jsonNodes []byte
 
-func DbSaveBlockchain(blockchain Blockchain) error {
+func ioSaveBlockchain(blockchain bc.Blockchain) error {
 	marshalled, err := json.MarshalIndent(blockchain, "", "  ")
 	if err != nil {
 		return err
@@ -23,8 +25,8 @@ func DbSaveBlockchain(blockchain Blockchain) error {
 	// return ioutil.WriteFile(blockchainFilename, jsonBlockchain, os.ModePerm)
 }
 
-func DbLoadBlockchain() (*Blockchain, error) {
-	var blockchain Blockchain
+func ioLoadBlockchain() (*bc.Blockchain, error) {
+	var blockchain bc.Blockchain
 
 	// file, err := ioutil.ReadFile(blockchainFilename)
 	// if err != nil {
@@ -37,14 +39,14 @@ func DbLoadBlockchain() (*Blockchain, error) {
 	return &blockchain, nil
 }
 
-func DbBlockchainExists() bool {
+func ioBlockchainExists() bool {
 	// _, err := os.Stat(blockchainFilename)
 
 	// return !errors.Is(err, os.ErrNotExist)
 	return false
 }
 
-func DbSaveNodes(nodes []Node) error {
+func ioSaveNodes(nodes []bc.Node) error {
 	marshalled, err := json.MarshalIndent(nodes, "", "  ")
 	if err != nil {
 		return err
@@ -56,8 +58,8 @@ func DbSaveNodes(nodes []Node) error {
 
 }
 
-func DbLoadNodes() ([]Node, error) {
-	var nodes []Node
+func ioLoadNodes() ([]bc.Node, error) {
+	var nodes []bc.Node
 
 	// file, err := ioutil.ReadFile(nodesFilename)
 	// if err != nil {
@@ -70,8 +72,8 @@ func DbLoadNodes() ([]Node, error) {
 	return nodes, nil
 }
 
-func DbAddNode(node Node) error {
-	nodes, err := DbLoadNodes()
+func ioAddNode(node bc.Node) error {
+	nodes, err := ioLoadNodes()
 	if err != nil {
 		return errors.New("nodes list not available")
 	}
@@ -88,7 +90,7 @@ func DbAddNode(node Node) error {
 		nodes = append(nodes, node)
 	}
 
-	err = DbSaveNodes(nodes)
+	err = ioSaveNodes(nodes)
 	if err != nil {
 		return errors.New("couldn't update nodes' list")
 	}

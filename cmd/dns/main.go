@@ -4,27 +4,39 @@ import (
 	"fmt"
 	"net/http"
 
+	bc "github.com/antavelos/blockchain"
+
 	"github.com/gin-gonic/gin"
 )
 
-var addresses []string = []string{
-	"http://localhost:3001",
-	"http://localhost:3002",
-	"http://localhost:3003",
-	"http://localhost:3004",
-	"http://localhost:3005",
+var nodes []bc.Node = []bc.Node{
+	{
+		Host: "http://localhost:3001",
+	},
+	{
+		Host: "http://localhost:3002",
+	},
+	{
+		Host: "http://localhost:3003",
+	},
+	{
+		Host: "http://localhost:3004",
+	},
+	{
+		Host: "http://localhost:3005",
+	},
 }
 
 var host string = "localhost"
 var port string = "3000"
 
-func getAddresses(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, addresses)
+func Nodes(c *gin.Context) {
+	c.IndentedJSON(http.StatusOK, nodes)
 }
 
 func initRouter() *gin.Engine {
 	router := gin.Default()
-	router.GET("/addresses", getAddresses)
+	router.GET("/nodes", Nodes)
 
 	return router
 }

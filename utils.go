@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func NewUuid() string {
+func newUuid() string {
 	return fmt.Sprintf("%v", uuid.New())
 }
 
