@@ -97,3 +97,9 @@ func ioAddNode(node bc.Node) error {
 
 	return nil
 }
+
+func ioNewBlockchain() {
+	var blockchain bc.Blockchain
+	blockchain.CreateGenesisBlock()
+	ioSaveBlockchain(blockchain)
+}

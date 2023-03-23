@@ -82,7 +82,7 @@ func pingDns() ([]bc.Node, error) {
 	return nodes, nil
 }
 
-func getMaxBlockchain(nodes []bc.Node) {
+func resolveLongestBlockchain(nodes []bc.Node) {
 
 	var maxLengthBlockchain bc.Blockchain
 	for _, node := range nodes {
