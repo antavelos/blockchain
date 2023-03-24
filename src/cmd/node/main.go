@@ -26,8 +26,7 @@ func main() {
 		}
 
 		for _, node := range nodes {
-			err := ping(node)
-			if err != nil {
+			if err := ping(node); err != nil {
 				log.Printf("Couldn't ping node %v: %v", node.Host, err.Error())
 			}
 		}

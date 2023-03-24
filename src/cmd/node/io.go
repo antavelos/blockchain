@@ -72,21 +72,18 @@ func ioLoadNodes() ([]bc.Node, error) {
 	return nodes, nil
 }
 
+func ioNewBlockchain() {
+	blockchain := bc.NewBlockchain()
+	ioSaveBlockchain(*blockchain)
+}
+
 func ioAddNode(node bc.Node) error {
 	nodes, err := ioLoadNodes()
 	if err != nil {
 		return errors.New("nodes list not available")
 	}
 
-	found := false
-	for _, n := range nodes {
-		if n.Host == node.Host {
-			found = true
-			break
-		}
-	}
-
-	if !found {
+	if !containsNode(nodes, node) {
 		nodes = append(nodes, node)
 	}
 
@@ -98,8 +95,11 @@ func ioAddNode(node bc.Node) error {
 	return nil
 }
 
-func ioNewBlockchain() {
-	var blockchain bc.Blockchain
-	blockchain.CreateGenesisBlock()
-	ioSaveBlockchain(blockchain)
+func containsNode(nodes []bc.Node, node bc.Node) bool {
+	for _, n := range nodes {
+		if n.Host == node.Host {
+			return true
+		}
+	}
+	return false
 }

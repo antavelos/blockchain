@@ -38,16 +38,17 @@ type Blockchain struct {
 }
 
 func (bc *Blockchain) removeTx(tx Transaction) {
-	index := -1
 	for i, bcTx := range bc.TxPool {
 		if tx.Id == bcTx.Id {
-			index = i
+			bc.TxPool = append(bc.TxPool[:i], bc.TxPool[i+1:]...)
 			break
 		}
 	}
+}
 
-	if index > -1 {
-		bc.TxPool = append(bc.TxPool[:index], bc.TxPool[index+1:]...)
+func (bc *Blockchain) removeTxs(txs []Transaction) {
+	for _, tx := range txs {
+		bc.removeTx(tx)
 	}
 }
 
@@ -57,10 +58,7 @@ func (bc *Blockchain) AddBlock(block Block) {
 	}
 
 	bc.Blocks = append(bc.Blocks, block)
-
-	for _, tx := range block.Txs {
-		bc.removeTx(tx)
-	}
+	bc.removeTxs(block.Txs)
 }
 
 func (bc *Blockchain) CreateGenesisBlock() {
@@ -72,6 +70,13 @@ func (bc *Blockchain) CreateGenesisBlock() {
 	}
 
 	bc.Blocks = append(bc.Blocks, genesisBlock)
+}
+
+func NewBlockchain() *Blockchain {
+	var blockchain Blockchain
+	blockchain.CreateGenesisBlock()
+
+	return &blockchain
 }
 
 func (bc *Blockchain) AddTx(tx Transaction) (Transaction, error) {
@@ -93,21 +98,23 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 	}
 
 	lastBlock := bc.Blocks[len(bc.Blocks)-1]
+	var latestTxs []Transaction
 
 	txCount := TxsPerBlock
 	if txPoolLength < TxsPerBlock {
 		txCount = txPoolLength
 	}
-	var latestTxs []Transaction
-	for i := 0; i < txCount; i++ {
-		latestTxs = append(latestTxs, bc.TxPool[i])
-	}
+	latestTxs = bc.TxPool[:txCount]
 
+	hashedLastBlock, err := hashBlock(lastBlock)
+	if err != nil {
+		return Block{}, errors.New("failed to hash last block")
+	}
 	newBlock := Block{
 		Idx:       lastBlock.Idx + 1,
 		Timestamp: time.Now().UnixMilli(),
 		Txs:       latestTxs,
-		PrevHash:  hashBlock(lastBlock),
+		PrevHash:  hashedLastBlock,
 		Nonce:     0,
 	}
 
@@ -121,39 +128,47 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 }
 
 func verifyBlock(block Block) bool {
-	hashed := hashBlock(block)
+	hashed, err := hashBlock(block)
+	if err != nil {
+		return false
+	}
 
 	prefix := []byte(strings.Repeat("0", difficulty))
 
 	return bytes.Equal(hashed[:difficulty], prefix)
 }
 
-func userBalanceFromTransaction(user string, tx Transaction) float64 {
-	if user == tx.Recipient {
+func getUserBalanceFromTransaction(user string, tx Transaction) float64 {
+	switch user {
+	case tx.Recipient:
 		return tx.Amount
-	}
-
-	if user == tx.Sender {
+	case tx.Sender:
 		return -tx.Amount
+	default:
+		return 0.0
 	}
-
-	return 0.0
 }
 
 func (bc Blockchain) validateTransaction(tx Transaction) bool {
+	senderBalance := bc.getUserBalance(tx.Sender)
+
+	return tx.Amount <= senderBalance
+}
+
+func (bc Blockchain) getUserBalance(sender string) float64 {
 	senderBalance := 0.0
 
 	for _, ptx := range bc.TxPool {
-		senderBalance += userBalanceFromTransaction(tx.Sender, ptx)
+		senderBalance += getUserBalanceFromTransaction(sender, ptx)
 	}
 
 	for _, block := range bc.Blocks {
 		for _, btx := range block.Txs {
-			senderBalance += userBalanceFromTransaction(tx.Sender, btx)
+			senderBalance += getUserBalanceFromTransaction(sender, btx)
 		}
 	}
 
-	return tx.Amount <= senderBalance
+	return senderBalance
 }
 
 func isValid(bc Blockchain) bool {
@@ -162,7 +177,15 @@ func isValid(bc Blockchain) bool {
 	}
 
 	for i := 1; i < len(bc.Blocks); i++ {
-		if !bytes.Equal(bc.Blocks[i].PrevHash, hashBlock(bc.Blocks[i-1])) {
+		currBlock := bc.Blocks[i]
+		prevBlock := bc.Blocks[i-1]
+		hashedPrevBlock, err := hashBlock(prevBlock)
+
+		if err != nil {
+			return false
+		}
+
+		if !bytes.Equal(currBlock.PrevHash, hashedPrevBlock) {
 			return false
 		}
 	}
@@ -180,11 +203,11 @@ func getLastBlock(bc Blockchain) Block {
 	return bc.Blocks[blocksNum-1]
 }
 
-func hashBlock(block Block) []byte {
+func hashBlock(block Block) ([]byte, error) {
 	jsonBlock, err := json.Marshal(block)
 	if err != nil {
-		return []byte{}
+		return []byte{}, err
 	}
 
-	return hash(jsonBlock)
+	return hash(jsonBlock), nil
 }

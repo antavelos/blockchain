@@ -28,8 +28,7 @@ func apiAddTx(c *gin.Context) {
 		return
 	}
 
-	err = ioSaveBlockchain(*blockchain)
-	if err != nil {
+	if err := ioSaveBlockchain(*blockchain); err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "couldn't update blockchain")
 		return
 	}
@@ -86,7 +85,7 @@ func apiPing(c *gin.Context) {
 
 	var node bc.Node
 	if err := c.BindJSON(&node); err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, "invalid input")
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 	log.Printf("ping from %#v", node.Host)
@@ -94,10 +93,16 @@ func apiPing(c *gin.Context) {
 	err := ioAddNode(node)
 	if err != nil {
 		log.Println(err.Error())
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
-	var nodes []bc.Node
-	nodes, _ = ioLoadNodes()
+	nodes, err := ioLoadNodes()
+	if err != nil {
+		log.Println(err.Error())
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
 	c.IndentedJSON(http.StatusOK, nodes)
 }

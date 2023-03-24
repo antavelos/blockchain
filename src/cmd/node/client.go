@@ -13,10 +13,12 @@ import (
 func ping(node bc.Node) error {
 	host := node.Host + "/ping"
 	selfNode := bc.Node{Host: "http://localhost:" + *port}
-	jsonSelfNode, _ := json.Marshal(selfNode)
-	postBody := bytes.NewBuffer(jsonSelfNode)
+	jsonSelfNode, err := json.Marshal(selfNode)
+	if err != nil {
+		return err
+	}
 
-	resp, err := http.Post(host, "application/json", postBody)
+	resp, err := http.Post(host, "application/json", bytes.NewBuffer(jsonSelfNode))
 	if err != nil {
 		return err
 	}
@@ -28,7 +30,9 @@ func ping(node bc.Node) error {
 	}
 
 	var nodes []bc.Node
-	json.Unmarshal(body, &nodes)
+	if err := json.Unmarshal(body, &nodes); err != nil {
+		return err
+	}
 
 	for _, node := range nodes {
 		if node.Host != selfNode.Host {
@@ -46,12 +50,12 @@ func getBlockchain(node bc.Node) (*bc.Blockchain, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
 	var blockchain bc.Blockchain
 	if err := json.Unmarshal(body, &blockchain); err != nil {
@@ -69,6 +73,7 @@ func pingDns() ([]bc.Node, error) {
 	if err != nil {
 		return nodes, err
 	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -83,12 +88,19 @@ func pingDns() ([]bc.Node, error) {
 }
 
 func resolveLongestBlockchain(nodes []bc.Node) {
+	maxLengthBlockchain := getMaxLengthBlockchain(nodes)
 
+	if len(maxLengthBlockchain.Blocks) > 0 {
+		ioSaveBlockchain(maxLengthBlockchain)
+	}
+}
+
+func getMaxLengthBlockchain(nodes []bc.Node) bc.Blockchain {
 	var maxLengthBlockchain bc.Blockchain
 	for _, node := range nodes {
 		nodeBlockchain, err := getBlockchain(node)
 		if err != nil {
-			log.Println("Couldn't retrieve blockchain from node %v: %v", node.Host, err.Error())
+			log.Printf("Couldn't retrieve blockchain from node %v: %v", node.Host, err.Error())
 			continue
 		}
 
@@ -96,8 +108,5 @@ func resolveLongestBlockchain(nodes []bc.Node) {
 			maxLengthBlockchain = *nodeBlockchain
 		}
 	}
-
-	if len(maxLengthBlockchain.Blocks) > 0 {
-		ioSaveBlockchain(maxLengthBlockchain)
-	}
+	return maxLengthBlockchain
 }
