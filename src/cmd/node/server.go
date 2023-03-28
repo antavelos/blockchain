@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -16,6 +17,11 @@ func apiAddTx(c *gin.Context) {
 		return
 	}
 
+	if tx.Sender == "" || tx.Recipient == "" || tx.Amount == 0.0 {
+		c.IndentedJSON(http.StatusInternalServerError, "invalid input")
+		return
+	}
+
 	blockchain, err := ioLoadBlockchain()
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "blockchain currently not available")
@@ -24,7 +30,7 @@ func apiAddTx(c *gin.Context) {
 
 	tx, err = blockchain.AddTx(tx)
 	if err != nil {
-		c.IndentedJSON(http.StatusOK, err.Error())
+		c.IndentedJSON(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -107,12 +113,57 @@ func apiPing(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, nodes)
 }
 
+func index(c *gin.Context) {
+	blockchain, err := ioLoadBlockchain()
+	if err != nil {
+		log.Println(err.Error())
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	marshalled, err := json.MarshalIndent(blockchain, "", "  ")
+	if err != nil {
+		log.Println(err.Error())
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.HTML(http.StatusOK, "index.tmpl", gin.H{
+		"title": "Blockchain",
+		"chain": string(marshalled),
+	})
+}
+
+func apiResolve(c *gin.Context) {
+	nodes, err := ioLoadNodes()
+	if err != nil {
+		log.Println(err.Error())
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	resolveLongestBlockchain(nodes)
+
+	blockchain, err := ioLoadBlockchain()
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "blockchain currently not available")
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, *blockchain)
+}
+
 func initRouter() *gin.Engine {
 	router := gin.Default()
+	router.SetTrustedProxies([]string{"localhost", "127.0.0.1"})
+	router.LoadHTMLGlob("cmd/node/templates/*")
+	//router.LoadHTMLFiles("templates/template1.html", "templates/template2.html")
+	router.GET("/", index)
 	router.GET("/blockchain", apiGetBlockchain)
 	router.POST("/transactions", apiAddTx)
-	router.POST("/mine", apiMine)
+	router.GET("/mine", apiMine)
 	router.POST("/ping", apiPing)
+	router.GET("/resolve", apiResolve)
 
 	return router
 }

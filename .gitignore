@@ -14,7 +14,7 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-blockchain.json
-nodes.json
+blockchain*.json
+nodes*.json
 src/cmd/dns/dns
 src/cmd/node/node

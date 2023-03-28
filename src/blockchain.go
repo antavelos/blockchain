@@ -13,12 +13,15 @@ import (
 const difficulty int = 2
 const TxsPerBlock int = 5
 
+var whitelist = []string{"alex"}
+
 type Node struct {
 	Host string `json:"host"`
 }
 
 type Transaction struct {
 	Id        string  `json:"id"`
+	Timestamp int64   `json:"timestamp"`
 	Sender    string  `json:"sender"`
 	Recipient string  `json:"recipient"`
 	Amount    float64 `json:"amount"`
@@ -79,12 +82,22 @@ func NewBlockchain() *Blockchain {
 	return &blockchain
 }
 
+func senderIsWhitelisted(sender string) bool {
+	for _, white := range whitelist {
+		if white == sender {
+			return true
+		}
+	}
+	return false
+}
+
 func (bc *Blockchain) AddTx(tx Transaction) (Transaction, error) {
 	if !bc.validateTransaction(tx) {
 		return Transaction{}, fmt.Errorf(
 			"transaction of %v units from %v to %v is not valid. Sender has not enough units", tx.Amount, tx.Sender, tx.Recipient)
 	}
 	tx.Id = newUuid()
+	tx.Timestamp = time.Now().UnixMilli()
 	bc.TxPool = append(bc.TxPool, tx)
 
 	return tx, nil
@@ -150,6 +163,10 @@ func getUserBalanceFromTransaction(user string, tx Transaction) float64 {
 }
 
 func (bc Blockchain) validateTransaction(tx Transaction) bool {
+	if senderIsWhitelisted(tx.Sender) {
+		return true
+	}
+
 	senderBalance := bc.getUserBalance(tx.Sender)
 
 	return tx.Amount <= senderBalance

@@ -12,7 +12,7 @@ import (
 
 func ping(node bc.Node) error {
 	host := node.Host + "/ping"
-	selfNode := bc.Node{Host: "http://localhost:" + *port}
+	selfNode := bc.Node{Host: "http://localhost:" + *Port}
 	jsonSelfNode, err := json.Marshal(selfNode)
 	if err != nil {
 		return err
@@ -28,7 +28,6 @@ func ping(node bc.Node) error {
 	if err != nil {
 		return err
 	}
-
 	var nodes []bc.Node
 	if err := json.Unmarshal(body, &nodes); err != nil {
 		return err
@@ -90,9 +89,14 @@ func pingDns() ([]bc.Node, error) {
 func resolveLongestBlockchain(nodes []bc.Node) {
 	maxLengthBlockchain := getMaxLengthBlockchain(nodes)
 
-	if len(maxLengthBlockchain.Blocks) > 0 {
-		ioSaveBlockchain(maxLengthBlockchain)
+	if len(maxLengthBlockchain.Blocks) == 0 {
+		return
 	}
+	blockchain, _ := ioLoadBlockchain()
+
+	blockchain.Blocks = maxLengthBlockchain.Blocks
+
+	ioSaveBlockchain(*blockchain)
 }
 
 func getMaxLengthBlockchain(nodes []bc.Node) bc.Blockchain {
