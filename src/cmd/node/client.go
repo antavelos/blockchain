@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	bc "github.com/antavelos/blockchain"
+	bc "github.com/antavelos/blockchain/src/blockchain"
 )
 
 func ping(node bc.Node) error {

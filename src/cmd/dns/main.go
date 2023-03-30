@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	bc "github.com/antavelos/blockchain"
+	bc "github.com/antavelos/blockchain/src/blockchain"
 
 	"github.com/gin-gonic/gin"
 )

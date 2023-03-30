@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	bc "github.com/antavelos/blockchain"
+	bc "github.com/antavelos/blockchain/src/blockchain"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,7 +17,7 @@ func apiAddTx(c *gin.Context) {
 		return
 	}
 
-	if tx.Sender == "" || tx.Recipient == "" || tx.Amount == 0.0 {
+	if tx.Body.Sender == "" || tx.Body.Recipient == "" || tx.Body.Amount == 0.0 {
 		c.IndentedJSON(http.StatusInternalServerError, "invalid input")
 		return
 	}

@@ -2,29 +2,35 @@ package blockchain
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/antavelos/blockchain/src/crypto"
+	"github.com/google/uuid"
 )
 
 const difficulty int = 2
 const TxsPerBlock int = 5
 
-var whitelist = []string{"alex"}
-
 type Node struct {
 	Host string `json:"host"`
 }
 
-type Transaction struct {
-	Id        string  `json:"id"`
-	Timestamp int64   `json:"timestamp"`
+type TransactionBody struct {
 	Sender    string  `json:"sender"`
 	Recipient string  `json:"recipient"`
 	Amount    float64 `json:"amount"`
+}
+
+type Transaction struct {
+	Id        string          `json:"id"`
+	Timestamp int64           `json:"timestamp"`
+	Body      TransactionBody `json:"body"`
+	Signature string          `json:"signature"`
 }
 
 type Block struct {
@@ -38,6 +44,27 @@ type Block struct {
 type Blockchain struct {
 	Blocks []Block       `json:"block"`
 	TxPool []Transaction `json:"txPool"`
+}
+
+func NewTransactionBody(sender string, recipient string, amount float64) *TransactionBody {
+	return &TransactionBody{
+		Sender:    sender,
+		Recipient: recipient,
+		Amount:    amount,
+	}
+}
+
+func (tx Transaction) GetBodyHash() ([]byte, error) {
+	marshalled, err := json.Marshal(tx.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return crypto.HashData(marshalled), nil
+}
+
+func (tx Transaction) IsCoinbase() bool {
+	return tx.Body.Sender == "0"
 }
 
 func (bc *Blockchain) removeTx(tx Transaction) {
@@ -82,21 +109,12 @@ func NewBlockchain() *Blockchain {
 	return &blockchain
 }
 
-func senderIsWhitelisted(sender string) bool {
-	for _, white := range whitelist {
-		if white == sender {
-			return true
-		}
-	}
-	return false
-}
-
 func (bc *Blockchain) AddTx(tx Transaction) (Transaction, error) {
-	if !bc.validateTransaction(tx) {
-		return Transaction{}, fmt.Errorf(
-			"transaction of %v units from %v to %v is not valid. Sender has not enough units", tx.Amount, tx.Sender, tx.Recipient)
+	if err := bc.validateTransaction(tx); err != nil {
+		return Transaction{}, err
 	}
-	tx.Id = newUuid()
+
+	tx.Id = uuid.NewString()
 	tx.Timestamp = time.Now().UnixMilli()
 	bc.TxPool = append(bc.TxPool, tx)
 
@@ -151,37 +169,76 @@ func verifyBlock(block Block) bool {
 	return bytes.Equal(hashed[:difficulty], prefix)
 }
 
-func getUserBalanceFromTransaction(user string, tx Transaction) float64 {
-	switch user {
-	case tx.Recipient:
-		return tx.Amount
-	case tx.Sender:
-		return -tx.Amount
+func getAddressBalanceFromTransactionBody(address string, txb TransactionBody) float64 {
+	switch address {
+	case txb.Recipient:
+		return txb.Amount
+	case txb.Sender:
+		return -txb.Amount
 	default:
 		return 0.0
 	}
 }
 
-func (bc Blockchain) validateTransaction(tx Transaction) bool {
-	if senderIsWhitelisted(tx.Sender) {
-		return true
+func (bc Blockchain) validateTransaction(tx Transaction) error {
+	if tx.IsCoinbase() {
+		return nil
 	}
 
-	senderBalance := bc.getUserBalance(tx.Sender)
+	txBodyBytes, err := json.Marshal(tx.Body)
+	if err != nil {
+		return errors.New("failed to marshal transaction body")
+	}
 
-	return tx.Amount <= senderBalance
+	txBodyHash := crypto.HashData(txBodyBytes)
+
+	signatureBytes, err := hex.DecodeString(tx.Signature)
+	if err != nil {
+		return errors.New("failed to decode signature")
+	}
+
+	publicKeyBytes, err := crypto.PublicKeyFromSignature(txBodyHash, signatureBytes)
+	if err != nil {
+		return errors.New("failed to retrieve public key from signature")
+	}
+
+	publicKey, err := crypto.UnmarshalPublicKey(publicKeyBytes)
+	if err != nil {
+		return errors.New("failed to unmarshal public key")
+	}
+
+	senderBytes, err := hex.DecodeString(tx.Body.Sender)
+	if err != nil {
+		return errors.New("failed to decode sender")
+	}
+
+	senderAddress := crypto.AddressFromPublicKey(publicKey)
+	if !bytes.Equal(senderAddress, senderBytes) {
+		return errors.New("sender address does not match with the public key of the signature")
+	}
+
+	if !crypto.VerifySignature(txBodyHash, publicKeyBytes, signatureBytes) {
+		return errors.New("failed to verify signature")
+	}
+
+	senderBalance := bc.getSenderBalance(tx.Body.Sender)
+	if tx.Body.Amount <= senderBalance {
+		return errors.New("sender has not sufficient funds")
+	}
+
+	return nil
 }
 
-func (bc Blockchain) getUserBalance(sender string) float64 {
+func (bc Blockchain) getSenderBalance(sender string) float64 {
 	senderBalance := 0.0
 
 	for _, ptx := range bc.TxPool {
-		senderBalance += getUserBalanceFromTransaction(sender, ptx)
+		senderBalance += getAddressBalanceFromTransactionBody(sender, ptx.Body)
 	}
 
 	for _, block := range bc.Blocks {
 		for _, btx := range block.Txs {
-			senderBalance += getUserBalanceFromTransaction(sender, btx)
+			senderBalance += getAddressBalanceFromTransactionBody(sender, btx.Body)
 		}
 	}
 
@@ -226,5 +283,5 @@ func hashBlock(block Block) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	return hash(jsonBlock), nil
+	return crypto.HashData(jsonBlock), nil
 }

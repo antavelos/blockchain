@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	bc "github.com/antavelos/blockchain"
+	bc "github.com/antavelos/blockchain/src/blockchain"
 )
 
 // const blockchainFilename = "./blockchain.json"
