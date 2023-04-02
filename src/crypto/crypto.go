@@ -2,40 +2,10 @@ package crypto
 
 import (
 	"crypto/ecdsa"
-	"encoding/hex"
 	"errors"
 
 	eth "github.com/ethereum/go-ethereum/crypto"
 )
-
-type Wallet struct {
-	Address    []byte
-	PrivateKey []byte
-	PublicKey  []byte
-}
-
-func NewWallet() (*Wallet, error) {
-	privateKey, err := GeneratePrivateKey()
-	if err != nil {
-		return nil, err
-	}
-	publicKey, err := PublicKeyFromPrivateKey(privateKey)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Wallet{
-		Address:    AddressFromPublicKey(publicKey),
-		PrivateKey: MarshalPrivateKey(privateKey),
-		PublicKey:  MarshalPublicKey(publicKey),
-	}, nil
-}
-
-func (w Wallet) Sign(message []byte) (string, error) {
-	signature, err := SignData(message, w.PrivateKey)
-
-	return hex.EncodeToString(signature), err
-}
 
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return eth.GenerateKey()

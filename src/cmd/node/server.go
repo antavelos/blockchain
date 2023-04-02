@@ -155,9 +155,11 @@ func apiResolve(c *gin.Context) {
 
 func initRouter() *gin.Engine {
 	router := gin.Default()
+
 	router.SetTrustedProxies([]string{"localhost", "127.0.0.1"})
+
 	router.LoadHTMLGlob("cmd/node/templates/*")
-	//router.LoadHTMLFiles("templates/template1.html", "templates/template2.html")
+
 	router.GET("/", index)
 	router.GET("/blockchain", apiGetBlockchain)
 	router.POST("/transactions", apiAddTx)

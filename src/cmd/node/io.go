@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"os"
 
 	bc "github.com/antavelos/blockchain/src/blockchain"
@@ -32,13 +31,13 @@ func ioSaveBlockchain(blockchain bc.Blockchain) error {
 	jsonBlockchain = marshalled
 
 	// return nil
-	return ioutil.WriteFile(getBlockchainFilename(), jsonBlockchain, os.ModePerm)
+	return os.WriteFile(getBlockchainFilename(), jsonBlockchain, os.ModePerm)
 }
 
 func ioLoadBlockchain() (*bc.Blockchain, error) {
 	var blockchain bc.Blockchain
 
-	file, err := ioutil.ReadFile(getBlockchainFilename())
+	file, err := os.ReadFile(getBlockchainFilename())
 	if err != nil {
 		return nil, err
 	}
@@ -64,14 +63,14 @@ func ioSaveNodes(nodes []bc.Node) error {
 
 	jsonNodes = marshalled
 	// return nil
-	return ioutil.WriteFile(getNodesFilename(), jsonNodes, os.ModePerm)
+	return os.WriteFile(getNodesFilename(), jsonNodes, os.ModePerm)
 
 }
 
 func ioLoadNodes() ([]bc.Node, error) {
 	var nodes []bc.Node
 
-	file, err := ioutil.ReadFile(getNodesFilename())
+	file, err := os.ReadFile(getNodesFilename())
 	if err != nil {
 		return nil, err
 	}

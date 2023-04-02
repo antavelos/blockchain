@@ -13,13 +13,12 @@ var Port *string
 func main() {
 	Port = flag.String("port", "8080", "the node's server port")
 	initBlockchain := flag.Bool("init-blockchain", false, "determines whether to initialise the blockchain or not")
-	// base := flag.Bool("base", false, "determines whether it's one of the base nodes of the blockchain")
 
 	flag.Parse()
 
 	nodes, err := pingDns()
 	if err != nil {
-		log.Fatal("Couldn't retrieve nodes from DNS %v", err.Error())
+		log.Fatalf("Couldn't retrieve nodes from DNS %v", err.Error())
 	}
 
 	if err := ioSaveNodes(nodes); err != nil {
