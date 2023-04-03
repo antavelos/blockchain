@@ -25,11 +25,11 @@ func main() {
 	flag.Parse()
 
 	if *simulate && *serve {
-		ErrorLogger.Fatal("Cannot do both simulate and server.")
+		ErrorLogger.Fatal("Cannot do both simulate and serve.")
 	}
 
 	if !*simulate && !*serve {
-		ErrorLogger.Fatal("No action was chosen. Exiting.")
+		ErrorLogger.Fatal("No action was chosen. Possible actions: 1) simulate, 2) serve. Exiting.")
 	}
 
 	if *simulate {

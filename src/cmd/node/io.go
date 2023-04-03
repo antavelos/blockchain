@@ -8,12 +8,6 @@ import (
 	bc "github.com/antavelos/blockchain/src/blockchain"
 )
 
-// const blockchainFilename = "./blockchain.json"
-// const nodesFilename = "./nodes.json"
-
-var jsonBlockchain []byte
-var jsonNodes []byte
-
 func getBlockchainFilename() string {
 	return "./blockchain_" + *Port + ".json"
 }
@@ -23,14 +17,11 @@ func getNodesFilename() string {
 }
 
 func ioSaveBlockchain(blockchain bc.Blockchain) error {
-	marshalled, err := json.MarshalIndent(blockchain, "", "  ")
+	jsonBlockchain, err := json.MarshalIndent(blockchain, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	jsonBlockchain = marshalled
-
-	// return nil
 	return os.WriteFile(getBlockchainFilename(), jsonBlockchain, os.ModePerm)
 }
 
@@ -43,7 +34,6 @@ func ioLoadBlockchain() (*bc.Blockchain, error) {
 	}
 
 	json.Unmarshal(file, &blockchain)
-	// json.Unmarshal(jsonBlockchain, &blockchain)
 
 	return &blockchain, nil
 }
@@ -52,19 +42,15 @@ func ioBlockchainExists() bool {
 	_, err := os.Stat(getBlockchainFilename())
 
 	return !errors.Is(err, os.ErrNotExist)
-	// return false
 }
 
 func ioSaveNodes(nodes []bc.Node) error {
-	marshalled, err := json.MarshalIndent(nodes, "", "  ")
+	jsonNodes, err := json.MarshalIndent(nodes, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	jsonNodes = marshalled
-	// return nil
 	return os.WriteFile(getNodesFilename(), jsonNodes, os.ModePerm)
-
 }
 
 func ioLoadNodes() ([]bc.Node, error) {
@@ -76,7 +62,6 @@ func ioLoadNodes() ([]bc.Node, error) {
 	}
 
 	json.Unmarshal(file, &nodes)
-	// json.Unmarshal(jsonNodes, &nodes)
 
 	return nodes, nil
 }

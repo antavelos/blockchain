@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
+	"sync"
 
 	bc "github.com/antavelos/blockchain/src/blockchain"
 
@@ -11,6 +11,8 @@ import (
 )
 
 func apiAddTx(c *gin.Context) {
+	m := sync.Mutex{}
+
 	var tx bc.Transaction
 	if err := c.BindJSON(&tx); err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "invalid input")
@@ -21,6 +23,9 @@ func apiAddTx(c *gin.Context) {
 		c.IndentedJSON(http.StatusInternalServerError, "invalid input")
 		return
 	}
+
+	m.Lock()
+	defer m.Unlock()
 
 	blockchain, err := ioLoadBlockchain()
 	if err != nil {
@@ -48,39 +53,15 @@ func apiGetBlockchain(c *gin.Context) {
 		c.IndentedJSON(http.StatusInternalServerError, "blockchain currently not available")
 		return
 	}
-	// nodes, _ := DbLoadNodes()
-	// if err != nil {
-	// 	return errors.New("nodes list not available")
-	// }
-
-	// result := map[string]any{
-	// 	"blockchain": *blockchain,
-	// 	"blocksNum":  len(blockchain.Blocks),
-	// 	"isValid":    isValid(*blockchain),
-	// 	"nodes":      nodes,
-	// }
 
 	c.IndentedJSON(http.StatusOK, *blockchain)
 }
 
 func apiMine(c *gin.Context) {
-	blockchain, err := ioLoadBlockchain()
-	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, "blockchain currently not available")
-		return
-	}
 
-	block, err := blockchain.NewBlock()
+	block, err := Mine()
 	if err != nil {
-		c.IndentedJSON(http.StatusOK, err.Error())
-		return
-	}
-
-	// TODO: to be done after network consensus
-	blockchain.AddBlock(block)
-	err = ioSaveBlockchain(*blockchain)
-	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, "couldn't update blockchain")
+		c.IndentedJSON(http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -94,18 +75,18 @@ func apiPing(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
-	log.Printf("ping from %#v", node.Host)
+	InfoLogger.Printf("Ping from %#v", node.Host)
 
 	err := ioAddNode(node)
 	if err != nil {
-		log.Println(err.Error())
+		ErrorLogger.Println(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	nodes, err := ioLoadNodes()
 	if err != nil {
-		log.Println(err.Error())
+		ErrorLogger.Println(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -116,14 +97,14 @@ func apiPing(c *gin.Context) {
 func index(c *gin.Context) {
 	blockchain, err := ioLoadBlockchain()
 	if err != nil {
-		log.Println(err.Error())
+		ErrorLogger.Println(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	marshalled, err := json.MarshalIndent(blockchain, "", "  ")
 	if err != nil {
-		log.Println(err.Error())
+		ErrorLogger.Println(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -137,7 +118,7 @@ func index(c *gin.Context) {
 func apiResolve(c *gin.Context) {
 	nodes, err := ioLoadNodes()
 	if err != nil {
-		log.Println(err.Error())
+		ErrorLogger.Println(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -160,11 +141,11 @@ func initRouter() *gin.Engine {
 
 	router.LoadHTMLGlob("cmd/node/templates/*")
 
+	router.POST("/transactions", apiAddTx)
+	router.POST("/ping", apiPing)
 	router.GET("/", index)
 	router.GET("/blockchain", apiGetBlockchain)
-	router.POST("/transactions", apiAddTx)
 	router.GET("/mine", apiMine)
-	router.POST("/ping", apiPing)
 	router.GET("/resolve", apiResolve)
 
 	return router

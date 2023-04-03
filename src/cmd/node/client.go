@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 
 	bc "github.com/antavelos/blockchain/src/blockchain"
@@ -99,17 +98,20 @@ func resolveLongestBlockchain(nodes []bc.Node) {
 	ioSaveBlockchain(*blockchain)
 }
 
-func getMaxLengthBlockchain(nodes []bc.Node) bc.Blockchain {
-	var maxLengthBlockchain bc.Blockchain
+func getMaxLengthBlockchain(nodes []bc.Node) *bc.Blockchain {
+	blockchain, _ := ioLoadBlockchain()
+
+	maxLengthBlockchain := blockchain
+
 	for _, node := range nodes {
 		nodeBlockchain, err := getBlockchain(node)
 		if err != nil {
-			log.Printf("Couldn't retrieve blockchain from node %v: %v", node.Host, err.Error())
+			ErrorLogger.Printf("Couldn't retrieve blockchain from node %v: %v", node.Host, err.Error())
 			continue
 		}
 
 		if len(nodeBlockchain.Blocks) > len(maxLengthBlockchain.Blocks) {
-			maxLengthBlockchain = *nodeBlockchain
+			maxLengthBlockchain = nodeBlockchain
 		}
 	}
 	return maxLengthBlockchain

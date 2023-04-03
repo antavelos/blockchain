@@ -82,6 +82,14 @@ func (bc *Blockchain) removeTxs(txs []Transaction) {
 	}
 }
 
+func getTxIds(txs []Transaction) (ids []string) {
+	for _, tx := range txs {
+		ids = append(ids, tx.Id[:6])
+	}
+	return
+
+}
+
 func (bc *Blockchain) AddBlock(block Block) {
 	if !verifyBlock(block) {
 		return
@@ -129,13 +137,13 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 	}
 
 	lastBlock := bc.Blocks[len(bc.Blocks)-1]
-	var latestTxs []Transaction
 
 	txCount := TxsPerBlock
 	if txPoolLength < TxsPerBlock {
 		txCount = txPoolLength
 	}
-	latestTxs = bc.TxPool[:txCount]
+	latestTxs := make([]Transaction, txCount)
+	copy(latestTxs, bc.TxPool[:txCount])
 
 	hashedLastBlock, err := hashBlock(lastBlock)
 	if err != nil {
