@@ -3,15 +3,31 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"sync"
+	"strings"
 
 	bc "github.com/antavelos/blockchain/src/blockchain"
 
 	"github.com/gin-gonic/gin"
 )
 
+func apiAddSharedTx(c *gin.Context) {
+	var tx bc.Transaction
+
+	if err := c.BindJSON(&tx); err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "invalid input")
+		return
+	}
+
+	tx, err := ioAddTx(tx)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.IndentedJSON(http.StatusCreated, tx)
+}
+
 func apiAddTx(c *gin.Context) {
-	m := sync.Mutex{}
 
 	var tx bc.Transaction
 	if err := c.BindJSON(&tx); err != nil {
@@ -24,23 +40,16 @@ func apiAddTx(c *gin.Context) {
 		return
 	}
 
-	m.Lock()
-	defer m.Unlock()
-
-	blockchain, err := ioLoadBlockchain()
-	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, "blockchain currently not available")
-		return
+	if nodeErrors := ShareTx(tx); nodeErrors != nil {
+		errorStrings := ErrorsToStrings(nodeErrors)
+		if len(errorStrings) > 0 {
+			ErrorLogger.Printf("Failed to share the transaction with other nodes: \n%v", strings.Join(errorStrings, "\n"))
+		}
 	}
 
-	tx, err = blockchain.AddTx(tx)
+	tx, err := ioAddTx(tx)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, err.Error())
-		return
-	}
-
-	if err := ioSaveBlockchain(*blockchain); err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, "couldn't update blockchain")
+		c.IndentedJSON(http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -142,6 +151,7 @@ func initRouter() *gin.Engine {
 	router.LoadHTMLGlob("cmd/node/templates/*")
 
 	router.POST("/transactions", apiAddTx)
+	router.POST("/shared-transactions", apiAddSharedTx)
 	router.POST("/ping", apiPing)
 	router.GET("/", index)
 	router.GET("/blockchain", apiGetBlockchain)

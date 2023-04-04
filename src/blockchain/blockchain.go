@@ -20,6 +20,10 @@ type Node struct {
 	Host string `json:"host"`
 }
 
+func (n Node) GetPort() string {
+	return n.Host[len(n.Host)-4:]
+}
+
 type TransactionBody struct {
 	Sender    string  `json:"sender"`
 	Recipient string  `json:"recipient"`
@@ -142,6 +146,7 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 	if txPoolLength < TxsPerBlock {
 		txCount = txPoolLength
 	}
+
 	latestTxs := make([]Transaction, txCount)
 	copy(latestTxs, bc.TxPool[:txCount])
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"sync"
 
 	bc "github.com/antavelos/blockchain/src/blockchain"
 )
@@ -36,6 +37,29 @@ func ioLoadBlockchain() (*bc.Blockchain, error) {
 	json.Unmarshal(file, &blockchain)
 
 	return &blockchain, nil
+}
+
+func ioAddTx(tx bc.Transaction) (bc.Transaction, error) {
+	m := sync.Mutex{}
+
+	m.Lock()
+	defer m.Unlock()
+
+	blockchain, err := ioLoadBlockchain()
+	if err != nil {
+		return tx, errors.New("blockchain currently not available")
+	}
+
+	tx, err = blockchain.AddTx(tx)
+	if err != nil {
+		return tx, err
+	}
+
+	if err := ioSaveBlockchain(*blockchain); err != nil {
+		return tx, errors.New("couldn't update blockchain")
+	}
+
+	return tx, nil
 }
 
 func ioBlockchainExists() bool {

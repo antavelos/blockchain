@@ -26,7 +26,7 @@ func main() {
 	}
 
 	if *serve && *mine {
-		log.Fatal("Cannot do both serve and mine.")
+		log.Fatal("Cannot do both serve and mine. Exiting.")
 	}
 
 	if !*serve && !*mine {

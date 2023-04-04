@@ -16,9 +16,9 @@ var nodes []bc.Node = []bc.Node{
 	{
 		Host: "http://localhost:3002",
 	},
-	// {
-	// 	Host: "http://localhost:3003",
-	// },
+	{
+		Host: "http://localhost:3003",
+	},
 	// {
 	// 	Host: "http://localhost:3004",
 	// },

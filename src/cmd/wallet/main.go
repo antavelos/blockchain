@@ -25,7 +25,7 @@ func main() {
 	flag.Parse()
 
 	if *simulate && *serve {
-		ErrorLogger.Fatal("Cannot do both simulate and serve.")
+		ErrorLogger.Fatal("Cannot do both simulate and serve. Exiting.")
 	}
 
 	if !*simulate && !*serve {
