@@ -24,12 +24,13 @@ func Mine() (bc.Block, error) {
 		return bc.Block{}, err
 	}
 
-	// TODO: to be done after network consensus
 	blockchain.AddBlock(block)
 	err = ioSaveBlockchain(*blockchain)
 	if err != nil {
 		return bc.Block{}, errors.New("failed to update blockchain")
 	}
+
+	// TODO: broadcast the block to the other nodes
 
 	return block, nil
 }

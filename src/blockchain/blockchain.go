@@ -71,7 +71,16 @@ func (tx Transaction) IsCoinbase() bool {
 	return tx.Body.Sender == "0"
 }
 
-func (bc *Blockchain) removeTx(tx Transaction) {
+func (b *Block) HasTx(tx Transaction) bool {
+	for _, bTx := range b.Txs {
+		if tx.Id == bTx.Id {
+			return true
+		}
+	}
+	return false
+}
+
+func (bc *Blockchain) RemoveTx(tx Transaction) {
 	for i, bcTx := range bc.TxPool {
 		if tx.Id == bcTx.Id {
 			bc.TxPool = append(bc.TxPool[:i], bc.TxPool[i+1:]...)
@@ -80,18 +89,10 @@ func (bc *Blockchain) removeTx(tx Transaction) {
 	}
 }
 
-func (bc *Blockchain) removeTxs(txs []Transaction) {
+func (bc *Blockchain) RemoveTxs(txs []Transaction) {
 	for _, tx := range txs {
-		bc.removeTx(tx)
+		bc.RemoveTx(tx)
 	}
-}
-
-func getTxIds(txs []Transaction) (ids []string) {
-	for _, tx := range txs {
-		ids = append(ids, tx.Id[:6])
-	}
-	return
-
 }
 
 func (bc *Blockchain) AddBlock(block Block) {
@@ -100,7 +101,7 @@ func (bc *Blockchain) AddBlock(block Block) {
 	}
 
 	bc.Blocks = append(bc.Blocks, block)
-	bc.removeTxs(block.Txs)
+	bc.RemoveTxs(block.Txs)
 }
 
 func (bc *Blockchain) CreateGenesisBlock() {

@@ -62,12 +62,6 @@ func ioAddTx(tx bc.Transaction) (bc.Transaction, error) {
 	return tx, nil
 }
 
-func ioBlockchainExists() bool {
-	_, err := os.Stat(getBlockchainFilename())
-
-	return !errors.Is(err, os.ErrNotExist)
-}
-
 func ioSaveNodes(nodes []bc.Node) error {
 	jsonNodes, err := json.MarshalIndent(nodes, "", "  ")
 	if err != nil {

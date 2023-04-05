@@ -87,6 +87,26 @@ func pingDns() ([]bc.Node, error) {
 	return nodes, nil
 }
 
+func updateBlockchain(oldBlockchain *bc.Blockchain, newBlockchain *bc.Blockchain) *bc.Blockchain {
+	if oldBlockchain == nil {
+		return newBlockchain
+	}
+
+	// TODO: append the blocks diff
+	oldBlockchain.Blocks = newBlockchain.Blocks
+
+	// TODO: to refactor
+	for i := len(oldBlockchain.Blocks) - 1; i > 0; i-- {
+		for _, tx := range oldBlockchain.TxPool {
+			if oldBlockchain.Blocks[i].HasTx(tx) {
+				oldBlockchain.RemoveTx(tx)
+			}
+		}
+	}
+
+	return oldBlockchain
+}
+
 func resolveLongestBlockchain(nodes []bc.Node) {
 	maxLengthBlockchain := getMaxLengthBlockchain(nodes)
 
@@ -94,13 +114,14 @@ func resolveLongestBlockchain(nodes []bc.Node) {
 		return
 	}
 
+	m := sync.Mutex{}
+
+	m.Lock()
+	defer m.Unlock()
+
 	blockchain, _ := ioLoadBlockchain()
 
-	if blockchain == nil {
-		blockchain = maxLengthBlockchain
-	} else {
-		blockchain.Blocks = maxLengthBlockchain.Blocks
-	}
+	blockchain = updateBlockchain(blockchain, maxLengthBlockchain)
 
 	ioSaveBlockchain(*blockchain)
 }

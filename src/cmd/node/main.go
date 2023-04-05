@@ -72,6 +72,10 @@ func getDNSNodes() []bc.Node {
 		log.Fatalf("Couldn't retrieve nodes from DNS %v", err.Error())
 	}
 
+	nodes = Filter(nodes, func(n bc.Node) bool {
+		return n.GetPort() != *Port
+	})
+
 	if err := ioSaveNodes(nodes); err != nil {
 		log.Printf("Couldn't save nodes received from DNS.")
 	}
