@@ -11,38 +11,6 @@ import (
 	bc "github.com/antavelos/blockchain/src/blockchain"
 )
 
-func ping(node bc.Node) error {
-	host := node.Host + "/ping"
-	selfNode := bc.Node{Host: "http://localhost:" + *Port}
-	jsonSelfNode, err := json.Marshal(selfNode)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.Post(host, "application/json", bytes.NewBuffer(jsonSelfNode))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	var nodes []bc.Node
-	if err := json.Unmarshal(body, &nodes); err != nil {
-		return err
-	}
-
-	for _, node := range nodes {
-		if node.Host != selfNode.Host {
-			ioAddNode(node)
-		}
-	}
-
-	return nil
-}
-
 func getBlockchain(node bc.Node) (*bc.Blockchain, error) {
 	url := node.Host + "/blockchain"
 
@@ -107,11 +75,16 @@ func updateBlockchain(oldBlockchain *bc.Blockchain, newBlockchain *bc.Blockchain
 	return oldBlockchain
 }
 
-func resolveLongestBlockchain(nodes []bc.Node) {
+func ResolveLongestBlockchain() error {
+	nodes, err := ioLoadNodes()
+	if err != nil {
+		return err
+	}
+
 	maxLengthBlockchain := getMaxLengthBlockchain(nodes)
 
 	if len(maxLengthBlockchain.Blocks) == 0 {
-		return
+		return nil
 	}
 
 	m := sync.Mutex{}
@@ -124,6 +97,8 @@ func resolveLongestBlockchain(nodes []bc.Node) {
 	blockchain = updateBlockchain(blockchain, maxLengthBlockchain)
 
 	ioSaveBlockchain(*blockchain)
+
+	return nil
 }
 
 func getMaxLengthBlockchain(nodes []bc.Node) *bc.Blockchain {
@@ -144,29 +119,136 @@ func getMaxLengthBlockchain(nodes []bc.Node) *bc.Blockchain {
 	return maxLengthBlockchain
 }
 
-func shareTx(node bc.Node, tx bc.Transaction) error {
-	txBytes, err := json.Marshal(tx)
-	if err != nil {
-		return err
-	}
+type NodeBroadcaster interface {
+	Broadcast() error
+}
 
-	url := node.Host + "/shared-transactions"
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(txBytes))
+type PingNodesBroadcaster struct {
+	Node bc.Node
+	Url  string
+}
+
+func NewPingNodesBroadcaster(node bc.Node) PingNodesBroadcaster {
+	return PingNodesBroadcaster{Node: node, Url: node.Host + pingURL}
+}
+
+func postData(url string, data []byte) ([]byte, error) {
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(string(body))
+	}
+
+	return io.ReadAll(resp.Body)
+}
+
+func (pnb PingNodesBroadcaster) Broadcast() error {
+	selfNode := bc.Node{Host: "http://localhost:" + *Port}
+
+	jsonSelfNode, err := json.Marshal(selfNode)
+	if err != nil {
 		return err
 	}
 
-	if resp.StatusCode != 201 {
-		return fmt.Errorf("node %v: %v", node.Host, string(body))
+	body, err := postData(pnb.Url, jsonSelfNode)
+	if err != nil {
+		return fmt.Errorf("node %v: %v", pnb.Node.Host, string(body))
+	}
+
+	var nodes []bc.Node
+	if err := json.Unmarshal(body, &nodes); err != nil {
+		return err
+	}
+
+	for _, node := range nodes {
+		if node.Host != selfNode.Host {
+			ioAddNode(node)
+		}
 	}
 
 	return nil
+}
+
+type TxNodeBroadcaster struct {
+	Node bc.Node
+	Tx   bc.Transaction
+	Url  string
+}
+
+func NewTxNodeBroadcaster(node bc.Node, tx bc.Transaction) TxNodeBroadcaster {
+	return TxNodeBroadcaster{Node: node, Tx: tx, Url: node.Host + sharedTransactionsURL}
+}
+
+func (txnb TxNodeBroadcaster) Broadcast() error {
+	txBytes, err := json.Marshal(txnb.Tx)
+	if err != nil {
+		return err
+	}
+
+	body, err := postData(txnb.Url, txBytes)
+	if err != nil {
+		return fmt.Errorf("node %v: %v", txnb.Node.Host, string(body))
+	}
+
+	return nil
+}
+
+type BlockNodeBroadcaster struct {
+	Node  bc.Node
+	Block bc.Block
+	Url   string
+}
+
+func NewBlockNodeBroadcaster(node bc.Node, block bc.Block) BlockNodeBroadcaster {
+	return BlockNodeBroadcaster{Node: node, Block: block, Url: node.Host + sharedBlocksURL}
+}
+
+func (bnb BlockNodeBroadcaster) Broadcast() error {
+	blockBytes, err := json.Marshal(bnb.Block)
+	if err != nil {
+		return err
+	}
+
+	body, err := postData(bnb.Url, blockBytes)
+	if err != nil {
+		return fmt.Errorf("node %v: %v", bnb.Node.Host, string(body))
+	}
+
+	return nil
+}
+
+func BroadcastNodes(nbs []NodeBroadcaster) []error {
+	errorsChan := make(chan error)
+	var wg sync.WaitGroup
+
+	for _, nb := range nbs {
+		wg.Add(1)
+		go func(na NodeBroadcaster) {
+			defer wg.Done()
+			errorsChan <- na.Broadcast()
+		}(nb)
+	}
+
+	go func() {
+		wg.Wait()
+		close(errorsChan)
+	}()
+
+	resultErrors := make([]error, 0)
+	for ch := range errorsChan {
+		resultErrors = append(resultErrors, ch)
+	}
+
+	return resultErrors
 }
 
 func ShareTx(tx bc.Transaction) []error {
@@ -175,53 +257,12 @@ func ShareTx(tx bc.Transaction) []error {
 		return []error{err}
 	}
 
-	errorsChan := make(chan error)
-	var wg sync.WaitGroup
-
+	var txnb []NodeBroadcaster
 	for _, node := range nodes {
-		wg.Add(1)
-		go func(node bc.Node, tx bc.Transaction) {
-			defer wg.Done()
-			errorsChan <- shareTx(node, tx)
-		}(node, tx)
+		txnb = append(txnb, NewTxNodeBroadcaster(node, tx))
 	}
 
-	go func() {
-		wg.Wait()
-		close(errorsChan)
-	}()
-
-	resultErrors := make([]error, 0)
-	for ch := range errorsChan {
-		resultErrors = append(resultErrors, ch)
-	}
-
-	return resultErrors
-}
-
-func shareBlock(node bc.Node, block bc.Block) error {
-	blockBytes, err := json.Marshal(block)
-	if err != nil {
-		return err
-	}
-
-	url := node.Host + "/shared-blocks"
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(blockBytes))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != 201 {
-		return fmt.Errorf("node %v: %v", node.Host, string(body))
-	}
-
-	return nil
+	return BroadcastNodes(txnb)
 }
 
 func ShareBlock(block bc.Block) []error {
@@ -230,26 +271,24 @@ func ShareBlock(block bc.Block) []error {
 		return []error{err}
 	}
 
-	errorsChan := make(chan error)
-	var wg sync.WaitGroup
-
+	var txnb []NodeBroadcaster
 	for _, node := range nodes {
-		wg.Add(1)
-		go func(node bc.Node, block bc.Block) {
-			defer wg.Done()
-			errorsChan <- shareBlock(node, block)
-		}(node, block)
+		txnb = append(txnb, NewBlockNodeBroadcaster(node, block))
 	}
 
-	go func() {
-		wg.Wait()
-		close(errorsChan)
-	}()
+	return BroadcastNodes(txnb)
+}
 
-	resultErrors := make([]error, 0)
-	for ch := range errorsChan {
-		resultErrors = append(resultErrors, ch)
+func Ping() []error {
+	nodes, err := ioLoadNodes()
+	if err != nil {
+		return []error{err}
 	}
 
-	return resultErrors
+	var txnb []NodeBroadcaster
+	for _, node := range nodes {
+		txnb = append(txnb, NewPingNodesBroadcaster(node))
+	}
+
+	return BroadcastNodes(txnb)
 }

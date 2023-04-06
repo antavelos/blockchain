@@ -33,9 +33,11 @@ func main() {
 		log.Fatal("No action was chosen. Possible actions: 1) serve, 2) mine. Exiting.")
 	}
 
-	nodes := getDNSNodes()
-	pingNodes(nodes)
-	resolveLongestBlockchain(nodes)
+	getDNSNodes()
+
+	Ping()
+
+	ResolveLongestBlockchain()
 
 	if *serve {
 		runServer()
@@ -81,13 +83,4 @@ func getDNSNodes() []bc.Node {
 	}
 
 	return nodes
-}
-
-func pingNodes(nodes []bc.Node) {
-	for _, node := range nodes {
-		log.Printf("Pinging node %v", node.Host)
-		if err := ping(node); err != nil {
-			log.Printf("Couldn't ping node %v: %v", node.Host, err.Error())
-		}
-	}
 }

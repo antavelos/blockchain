@@ -10,6 +10,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const indexURL = "/"
+const transactionsURL = "/transactions"
+const sharedTransactionsURL = "/shared-transactions"
+const sharedBlocksURL = "/shared-blocks"
+const pingURL = "/ping"
+const blockchainURL = "/blockchain"
+const mineURL = "/mine"
+const resolveURL = "/resolve"
+
 func apiAddSharedBlock(c *gin.Context) {
 	var block bc.Block
 
@@ -142,14 +151,10 @@ func index(c *gin.Context) {
 }
 
 func apiResolve(c *gin.Context) {
-	nodes, err := ioLoadNodes()
-	if err != nil {
-		ErrorLogger.Println(err.Error())
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
 
-	resolveLongestBlockchain(nodes)
+	// TODO: refactor
+
+	ResolveLongestBlockchain()
 
 	blockchain, err := ioLoadBlockchain()
 	if err != nil {
@@ -167,14 +172,14 @@ func initRouter() *gin.Engine {
 
 	router.LoadHTMLGlob("cmd/node/templates/*")
 
-	router.POST("/transactions", apiAddTx)
-	router.POST("/shared-transactions", apiAddSharedTx)
-	router.POST("/shared-blocks", apiAddSharedBlock)
-	router.POST("/ping", apiPing)
-	router.GET("/", index)
-	router.GET("/blockchain", apiGetBlockchain)
-	router.GET("/mine", apiMine)
-	router.GET("/resolve", apiResolve)
+	router.POST(transactionsURL, apiAddTx)
+	router.POST(sharedTransactionsURL, apiAddSharedTx)
+	router.POST(sharedBlocksURL, apiAddSharedBlock)
+	router.POST(pingURL, apiPing)
+	router.GET(indexURL, index)
+	router.GET(blockchainURL, apiGetBlockchain)
+	router.GET(mineURL, apiMine)
+	router.GET(resolveURL, apiResolve)
 
 	return router
 }
