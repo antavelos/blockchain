@@ -179,15 +179,66 @@ func ShareTx(tx bc.Transaction) []error {
 	var wg sync.WaitGroup
 
 	for _, node := range nodes {
-		if node.GetPort() == *Port {
-			continue
-		}
-
 		wg.Add(1)
 		go func(node bc.Node, tx bc.Transaction) {
 			defer wg.Done()
 			errorsChan <- shareTx(node, tx)
 		}(node, tx)
+	}
+
+	go func() {
+		wg.Wait()
+		close(errorsChan)
+	}()
+
+	resultErrors := make([]error, 0)
+	for ch := range errorsChan {
+		resultErrors = append(resultErrors, ch)
+	}
+
+	return resultErrors
+}
+
+func shareBlock(node bc.Node, block bc.Block) error {
+	blockBytes, err := json.Marshal(block)
+	if err != nil {
+		return err
+	}
+
+	url := node.Host + "/shared-blocks"
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(blockBytes))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 201 {
+		return fmt.Errorf("node %v: %v", node.Host, string(body))
+	}
+
+	return nil
+}
+
+func ShareBlock(block bc.Block) []error {
+	nodes, err := ioLoadNodes()
+	if err != nil {
+		return []error{err}
+	}
+
+	errorsChan := make(chan error)
+	var wg sync.WaitGroup
+
+	for _, node := range nodes {
+		wg.Add(1)
+		go func(node bc.Node, block bc.Block) {
+			defer wg.Done()
+			errorsChan <- shareBlock(node, block)
+		}(node, block)
 	}
 
 	go func() {

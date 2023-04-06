@@ -10,6 +10,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func apiAddSharedBlock(c *gin.Context) {
+	var block bc.Block
+
+	if err := c.BindJSON(&block); err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "invalid input")
+		return
+	}
+
+	block, err := ioAddBlock(block)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.IndentedJSON(http.StatusCreated, block)
+}
+
 func apiAddSharedTx(c *gin.Context) {
 	var tx bc.Transaction
 
@@ -40,17 +57,17 @@ func apiAddTx(c *gin.Context) {
 		return
 	}
 
+	tx, err := ioAddTx(tx)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	if nodeErrors := ShareTx(tx); nodeErrors != nil {
 		errorStrings := ErrorsToStrings(nodeErrors)
 		if len(errorStrings) > 0 {
 			ErrorLogger.Printf("Failed to share the transaction with other nodes: \n%v", strings.Join(errorStrings, "\n"))
 		}
-	}
-
-	tx, err := ioAddTx(tx)
-	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, err.Error())
-		return
 	}
 
 	c.IndentedJSON(http.StatusCreated, tx)
@@ -152,6 +169,7 @@ func initRouter() *gin.Engine {
 
 	router.POST("/transactions", apiAddTx)
 	router.POST("/shared-transactions", apiAddSharedTx)
+	router.POST("/shared-blocks", apiAddSharedBlock)
 	router.POST("/ping", apiPing)
 	router.GET("/", index)
 	router.GET("/blockchain", apiGetBlockchain)

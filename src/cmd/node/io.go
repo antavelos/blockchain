@@ -62,6 +62,29 @@ func ioAddTx(tx bc.Transaction) (bc.Transaction, error) {
 	return tx, nil
 }
 
+func ioAddBlock(block bc.Block) (bc.Block, error) {
+	m := sync.Mutex{}
+
+	m.Lock()
+	defer m.Unlock()
+
+	blockchain, err := ioLoadBlockchain()
+	if err != nil {
+		return block, errors.New("blockchain currently not available")
+	}
+
+	err = blockchain.AddBlock(block)
+	if err != nil {
+		return block, err
+	}
+
+	if err := ioSaveBlockchain(*blockchain); err != nil {
+		return block, errors.New("couldn't update blockchain")
+	}
+
+	return block, nil
+}
+
 func ioSaveNodes(nodes []bc.Node) error {
 	jsonNodes, err := json.MarshalIndent(nodes, "", "  ")
 	if err != nil {

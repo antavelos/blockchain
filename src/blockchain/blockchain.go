@@ -95,13 +95,15 @@ func (bc *Blockchain) RemoveTxs(txs []Transaction) {
 	}
 }
 
-func (bc *Blockchain) AddBlock(block Block) {
+func (bc *Blockchain) AddBlock(block Block) error {
 	if !verifyBlock(block) {
-		return
+		return errors.New("failed to verify block")
 	}
 
 	bc.Blocks = append(bc.Blocks, block)
 	bc.RemoveTxs(block.Txs)
+
+	return nil
 }
 
 func (bc *Blockchain) CreateGenesisBlock() {
@@ -127,8 +129,13 @@ func (bc *Blockchain) AddTx(tx Transaction) (Transaction, error) {
 		return Transaction{}, err
 	}
 
-	tx.Id = uuid.NewString()
-	tx.Timestamp = time.Now().UnixMilli()
+	if tx.Id == "" {
+		tx.Id = uuid.NewString()
+	}
+
+	if tx.Timestamp == 0 {
+		tx.Timestamp = time.Now().UnixMilli()
+	}
 	bc.TxPool = append(bc.TxPool, tx)
 
 	return tx, nil
