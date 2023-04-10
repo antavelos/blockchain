@@ -24,12 +24,8 @@ services:
       - 3001:3001
     environment:
       - PORT=3001
-      - DNS_HOST=dns
-      - DNS_PORT=3000
-      - MINING_DIFFICULTY=2
-      - TXS_PER_BLOCK=10
-      - BLOCKCHAIN_FILENAME=/data/blockchain.json
-      - NODES_FILENAME=/data/nodes.json
+    env_file:
+      - .node_env
     volumes:
       - ./data/blockchain_1.json:/data/blockchain.json
       - ./data/nodes_1.json:/data/nodes.json
@@ -47,12 +43,8 @@ services:
       - 3002:3002
     environment:
       - PORT=3002
-      - DNS_HOST=dns
-      - DNS_PORT=3000
-      - MINING_DIFFICULTY=2
-      - TXS_PER_BLOCK=10
-      - BLOCKCHAIN_FILENAME=/data/blockchain.json
-      - NODES_FILENAME=/data/nodes.json
+    env_file:
+      - .node_env
     volumes:
       - ./data/blockchain_2.json:/data/blockchain.json
       - ./data/nodes_2.json:/data/nodes.json
@@ -70,12 +62,8 @@ services:
       - 3003:3003
     environment:
       - PORT=3003
-      - DNS_HOST=dns
-      - DNS_PORT=3000
-      - MINING_DIFFICULTY=2
-      - TXS_PER_BLOCK=10
-      - BLOCKCHAIN_FILENAME=/data/blockchain.json
-      - NODES_FILENAME=/data/nodes.json
+    env_file:
+      - .node_env
     volumes:
       - ./data/blockchain_3.json:/data/blockchain.json
       - ./data/nodes_3.json:/data/nodes.json
@@ -93,12 +81,8 @@ services:
       - 3004:3004
     environment:
       - PORT=3004
-      - DNS_HOST=dns
-      - DNS_PORT=3000
-      - MINING_DIFFICULTY=2
-      - TXS_PER_BLOCK=10
-      - BLOCKCHAIN_FILENAME=/data/blockchain.json
-      - NODES_FILENAME=/data/nodes.json
+    env_file:
+      - .node_env
     volumes:
       - ./data/blockchain_4.json:/data/blockchain.json
       - ./data/nodes_4.json:/data/nodes.json
@@ -116,12 +100,8 @@ services:
       - 3005:3005
     environment:
       - PORT=3005
-      - DNS_HOST=dns
-      - DNS_PORT=3000
-      - MINING_DIFFICULTY=2
-      - TXS_PER_BLOCK=10
-      - BLOCKCHAIN_FILENAME=/data/blockchain.json
-      - NODES_FILENAME=/data/nodes.json
+    env_file:
+      - .node_env
     volumes:
       - ./data/blockchain_5.json:/data/blockchain.json
       - ./data/nodes_5.json:/data/nodes.json
