@@ -4,18 +4,39 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
+	"os"
 	"time"
 
 	bc "github.com/antavelos/blockchain/src/blockchain"
 )
 
-const dnsHost = "http://localhost:3000"
+func getDnsHost() string {
+	return fmt.Sprintf("http://%v:%v", os.Getenv("DNS_HOST"), os.Getenv("DNS_PORT"))
+}
 
-var Port *string
+func getSelfHost() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		log.Printf("Cannot get IP: " + err.Error() + "\n")
+	}
+
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+
+	return ""
+}
+
+func getSelfPort() string {
+	return os.Getenv("PORT")
+}
 
 func main() {
-	Port = flag.String("port", "8080", "The node's server port")
-	serve := flag.Bool("serve", false, "Indicates whether it will run as server")
 	mine := flag.Bool("mine", false, "Indicates whether it will run as miner")
 	init := flag.Bool("init", false, "Initialises the blockchain. Existing blockchain will be overriden. Overrules other options.")
 
@@ -25,27 +46,24 @@ func main() {
 		ioNewBlockchain()
 	}
 
-	if *serve && *mine {
-		log.Fatal("Cannot do both serve and mine. Exiting.")
+	initNode()
+
+	if *mine {
+		go runMiningLoop()
 	}
 
-	if !*serve && !*mine {
-		log.Fatal("No action was chosen. Possible actions: 1) serve, 2) mine. Exiting.")
-	}
+	router := initRouter()
+	router.Run(fmt.Sprintf(":%v", getSelfPort()))
+}
+
+func initNode() {
+	IntroduceToDns()
 
 	getDNSNodes()
 
 	Ping()
 
 	ResolveLongestBlockchain()
-
-	if *serve {
-		runServer()
-	}
-
-	if *mine {
-		runMiningLoop()
-	}
 }
 
 func runMiningLoop() {
@@ -54,6 +72,13 @@ func runMiningLoop() {
 		block, err := Mine()
 		if err != nil {
 			ErrorLogger.Printf("New block [FAIL]: %v", err.Error())
+
+			InfoLogger.Println("Resolving longest blockchain")
+			err := ResolveLongestBlockchain()
+			if err != nil {
+				ErrorLogger.Printf("Failed to resolve longest blockchain: %v", err.Error())
+			}
+
 		} else {
 			InfoLogger.Printf("New block [OK]: %v", block.Idx)
 		}
@@ -63,22 +88,19 @@ func runMiningLoop() {
 	}
 }
 
-func runServer() {
-	router := initRouter()
-	router.Run(fmt.Sprintf("localhost:%v", *Port))
-}
-
 func getDNSNodes() []bc.Node {
-	nodes, err := pingDns()
+	ndb := getNodeDb()
+
+	nodes, err := GetDnsNodes()
 	if err != nil {
 		log.Fatalf("Couldn't retrieve nodes from DNS %v", err.Error())
 	}
 
 	nodes = Filter(nodes, func(n bc.Node) bool {
-		return n.GetPort() != *Port
+		return n.GetPort() != getSelfPort()
 	})
 
-	if err := ioSaveNodes(nodes); err != nil {
+	if err := ndb.SaveNodes(nodes); err != nil {
 		log.Printf("Couldn't save nodes received from DNS.")
 	}
 

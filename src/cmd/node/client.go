@@ -33,9 +33,9 @@ func getBlockchain(node bc.Node) (*bc.Blockchain, error) {
 	return &blockchain, nil
 }
 
-func pingDns() ([]bc.Node, error) {
+func GetDnsNodes() ([]bc.Node, error) {
 	var nodes []bc.Node
-	url := dnsHost + "/nodes"
+	url := getDnsHost() + "/nodes"
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -53,6 +53,28 @@ func pingDns() ([]bc.Node, error) {
 	}
 
 	return nodes, nil
+}
+
+func IntroduceToDns() error {
+	url := getDnsHost() + "/nodes"
+	selfNode := bc.Node{Host: fmt.Sprintf("http://%v:%v", getSelfHost(), getSelfPort())}
+
+	selfNodesBytes, err := json.Marshal(selfNode)
+	if err != nil {
+		return err
+	}
+
+	body, err := postData(url, selfNodesBytes)
+	if err != nil {
+		return fmt.Errorf("failed to reach DNS: %v", string(body))
+	}
+
+	var nodes []bc.Node
+	if err := json.Unmarshal(body, &nodes); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func updateBlockchain(oldBlockchain *bc.Blockchain, newBlockchain *bc.Blockchain) *bc.Blockchain {
@@ -76,7 +98,10 @@ func updateBlockchain(oldBlockchain *bc.Blockchain, newBlockchain *bc.Blockchain
 }
 
 func ResolveLongestBlockchain() error {
-	nodes, err := ioLoadNodes()
+	ndb := getNodeDb()
+	bdb := getBlockchainDb()
+
+	nodes, err := ndb.LoadNodes()
 	if err != nil {
 		return err
 	}
@@ -92,17 +117,19 @@ func ResolveLongestBlockchain() error {
 	m.Lock()
 	defer m.Unlock()
 
-	blockchain, _ := ioLoadBlockchain()
+	blockchain, _ := bdb.LoadBlockchain()
 
 	blockchain = updateBlockchain(blockchain, maxLengthBlockchain)
 
-	ioSaveBlockchain(*blockchain)
+	bdb.SaveBlockchain(*blockchain)
 
 	return nil
 }
 
 func getMaxLengthBlockchain(nodes []bc.Node) *bc.Blockchain {
-	maxLengthBlockchain, _ := ioLoadBlockchain()
+	bdb := getBlockchainDb()
+
+	maxLengthBlockchain, _ := bdb.LoadBlockchain()
 
 	for _, node := range nodes {
 		nodeBlockchain, err := getBlockchain(node)
@@ -152,7 +179,8 @@ func postData(url string, data []byte) ([]byte, error) {
 }
 
 func (pnb PingNodesBroadcaster) Broadcast() error {
-	selfNode := bc.Node{Host: "http://localhost:" + *Port}
+	ndb := getNodeDb()
+	selfNode := bc.Node{Host: fmt.Sprintf("http://%v:%v", getSelfHost(), getSelfPort())}
 
 	jsonSelfNode, err := json.Marshal(selfNode)
 	if err != nil {
@@ -171,7 +199,7 @@ func (pnb PingNodesBroadcaster) Broadcast() error {
 
 	for _, node := range nodes {
 		if node.Host != selfNode.Host {
-			ioAddNode(node)
+			ndb.AddNode(node)
 		}
 	}
 
@@ -194,9 +222,9 @@ func (txnb TxNodeBroadcaster) Broadcast() error {
 		return err
 	}
 
-	body, err := postData(txnb.Url, txBytes)
+	_, err = postData(txnb.Url, txBytes)
 	if err != nil {
-		return fmt.Errorf("node %v: %v", txnb.Node.Host, string(body))
+		return fmt.Errorf("node %v: %v", txnb.Node.Host, err.Error())
 	}
 
 	return nil
@@ -218,9 +246,9 @@ func (bnb BlockNodeBroadcaster) Broadcast() error {
 		return err
 	}
 
-	body, err := postData(bnb.Url, blockBytes)
+	_, err = postData(bnb.Url, blockBytes)
 	if err != nil {
-		return fmt.Errorf("node %v: %v", bnb.Node.Host, string(body))
+		return fmt.Errorf("node %v: %v", bnb.Node.Host, err.Error())
 	}
 
 	return nil
@@ -252,7 +280,9 @@ func BroadcastNodes(nbs []NodeBroadcaster) []error {
 }
 
 func ShareTx(tx bc.Transaction) []error {
-	nodes, err := ioLoadNodes()
+	ndb := getNodeDb()
+
+	nodes, err := ndb.LoadNodes()
 	if err != nil {
 		return []error{err}
 	}
@@ -266,7 +296,9 @@ func ShareTx(tx bc.Transaction) []error {
 }
 
 func ShareBlock(block bc.Block) []error {
-	nodes, err := ioLoadNodes()
+	ndb := getNodeDb()
+
+	nodes, err := ndb.LoadNodes()
 	if err != nil {
 		return []error{err}
 	}
@@ -280,7 +312,9 @@ func ShareBlock(block bc.Block) []error {
 }
 
 func Ping() []error {
-	nodes, err := ioLoadNodes()
+	ndb := getNodeDb()
+
+	nodes, err := ndb.LoadNodes()
 	if err != nil {
 		return []error{err}
 	}

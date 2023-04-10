@@ -5,7 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,8 +16,22 @@ import (
 	"github.com/google/uuid"
 )
 
-const difficulty int = 2
-const TxsPerBlock int = 5
+func getMiningDifficulty() int {
+	diff, err := strconv.Atoi(os.Getenv("MINING_DIFFICULTY"))
+	if err != nil {
+		return 2
+	}
+	return diff
+}
+
+func getTxsPerBlock() int {
+	txsPerBlock, err := strconv.Atoi(os.Getenv("TXS_PER_BLOCK"))
+	if err != nil {
+		return 5
+	}
+
+	return txsPerBlock
+}
 
 type Node struct {
 	Host string `json:"host"`
@@ -96,8 +113,8 @@ func (bc *Blockchain) RemoveTxs(txs []Transaction) {
 }
 
 func (bc *Blockchain) AddBlock(block Block) error {
-	if !verifyBlock(block) {
-		return errors.New("failed to verify block")
+	if err := bc.validateBlock(block); err != nil {
+		return fmt.Errorf("failed to validate block: %v", err.Error())
 	}
 
 	bc.Blocks = append(bc.Blocks, block)
@@ -150,8 +167,9 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 
 	lastBlock := bc.Blocks[len(bc.Blocks)-1]
 
-	txCount := TxsPerBlock
-	if txPoolLength < TxsPerBlock {
+	txsPerBlock := getTxsPerBlock()
+	txCount := txsPerBlock
+	if txPoolLength < txsPerBlock {
 		txCount = txPoolLength
 	}
 
@@ -171,7 +189,7 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 	}
 
 	log.Printf("Mining...")
-	for !verifyBlock(newBlock) {
+	for !blockSatisfiesHashRule(newBlock) {
 		newBlock.Nonce += 1
 	}
 	log.Printf("Found Nonce: %v", newBlock.Nonce)
@@ -179,15 +197,30 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 	return newBlock, nil
 }
 
-func verifyBlock(block Block) bool {
-	hashed, err := hashBlock(block)
-	if err != nil {
-		return false
-	}
+func blockSatisfiesHashRule(block Block) bool {
+	hashed, _ := hashBlock(block)
+
+	difficulty := getMiningDifficulty()
 
 	prefix := []byte(strings.Repeat("0", difficulty))
 
 	return bytes.Equal(hashed[:difficulty], prefix)
+}
+
+func (bc *Blockchain) validateBlock(block Block) error {
+	difficulty := getMiningDifficulty()
+
+	if !blockSatisfiesHashRule(block) {
+		return fmt.Errorf("block does not start with %v '0'", difficulty)
+	}
+
+	lastBlockHashed, _ := hashBlock(bc.Blocks[len(bc.Blocks)-1])
+
+	if !bytes.Equal(block.PrevHash, lastBlockHashed) {
+		return errors.New("block.PrevHash does not match with last block's hash")
+	}
+
+	return nil
 }
 
 func getAddressBalanceFromTransactionBody(address string, txb TransactionBody) float64 {
@@ -266,6 +299,7 @@ func (bc Blockchain) getSenderBalance(sender string) float64 {
 	return senderBalance
 }
 
+// TODO: to be used
 func isValid(bc Blockchain) bool {
 	if len(bc.Blocks) == 1 {
 		return true

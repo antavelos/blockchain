@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -83,7 +84,9 @@ func apiAddTx(c *gin.Context) {
 }
 
 func apiGetBlockchain(c *gin.Context) {
-	blockchain, err := ioLoadBlockchain()
+	bdb := getBlockchainDb()
+
+	blockchain, err := bdb.LoadBlockchain()
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "blockchain currently not available")
 		return
@@ -104,6 +107,7 @@ func apiMine(c *gin.Context) {
 }
 
 func apiPing(c *gin.Context) {
+	ndb := getNodeDb()
 
 	var node bc.Node
 	if err := c.BindJSON(&node); err != nil {
@@ -112,14 +116,14 @@ func apiPing(c *gin.Context) {
 	}
 	InfoLogger.Printf("Ping from %#v", node.Host)
 
-	err := ioAddNode(node)
+	err := ndb.AddNode(node)
 	if err != nil {
 		ErrorLogger.Println(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	nodes, err := ioLoadNodes()
+	nodes, err := ndb.LoadNodes()
 	if err != nil {
 		ErrorLogger.Println(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -130,7 +134,9 @@ func apiPing(c *gin.Context) {
 }
 
 func index(c *gin.Context) {
-	blockchain, err := ioLoadBlockchain()
+	bdb := getBlockchainDb()
+
+	blockchain, err := bdb.LoadBlockchain()
 	if err != nil {
 		ErrorLogger.Println(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -151,12 +157,17 @@ func index(c *gin.Context) {
 }
 
 func apiResolve(c *gin.Context) {
+	bdb := getBlockchainDb()
 
 	// TODO: refactor
 
-	ResolveLongestBlockchain()
+	err := ResolveLongestBlockchain()
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, fmt.Sprintf("failed to resolve blockchain: %v", err.Error()))
+		return
+	}
 
-	blockchain, err := ioLoadBlockchain()
+	blockchain, err := bdb.LoadBlockchain()
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "blockchain currently not available")
 		return

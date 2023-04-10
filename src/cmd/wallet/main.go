@@ -9,6 +9,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 
 	bc "github.com/antavelos/blockchain/src/blockchain"
@@ -16,7 +17,7 @@ import (
 	"github.com/antavelos/blockchain/src/wallet"
 )
 
-const serverPort = "4000"
+var port string = os.Getenv("PORT")
 
 func main() {
 	simulate := flag.Bool("simulate", false, "simulates new wallets' and transactions'")
@@ -33,7 +34,7 @@ func main() {
 	}
 
 	if *simulate {
-		runLoop()
+		runSimulation()
 	}
 
 	if *serve {
@@ -43,14 +44,16 @@ func main() {
 
 func runServer() {
 	router := InitRouter()
-	router.Run(fmt.Sprintf("localhost:%v", serverPort))
+	router.Run(fmt.Sprintf(":%v", port))
 }
 
-func runLoop() {
+func runSimulation() {
+	wdb := getWalletDb()
+
 	i := 0
 	for {
-		if i%10 == 0 {
-			w, err := CreateWallet()
+		if i%300 == 0 {
+			w, err := wdb.CreateWallet()
 			if err != nil {
 				ErrorLogger.Printf("New wallet [FAIL]: %v", err.Error())
 			} else {
@@ -89,7 +92,9 @@ func getRandomFloat(min, max float64) float64 {
 }
 
 func getRandomWallets() ([]wallet.Wallet, error) {
-	wallets, err := LoadWallets()
+	wdb := getWalletDb()
+
+	wallets, err := wdb.LoadWallets()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load wallets: %v", err.Error())
 	}
@@ -146,10 +151,42 @@ func createTransaction() (bc.Transaction, error) {
 	return sendTransaction(tx)
 }
 
+func getDnsHost() string {
+	return fmt.Sprintf("http://%v:%v", os.Getenv("DNS_HOST"), os.Getenv("DNS_PORT"))
+}
+
+func getDnsNodes() ([]bc.Node, error) {
+	var nodes []bc.Node
+	url := getDnsHost() + "/nodes"
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nodes, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nodes, err
+	}
+
+	if err := json.Unmarshal(body, &nodes); err != nil {
+		return nodes, err
+	}
+
+	return nodes, nil
+}
+
 func sendTransaction(tx bc.Transaction) (bc.Transaction, error) {
 
-	host := "http://localhost:3001"
-	url := host + "/transactions"
+	nodes, err := getDnsNodes()
+	if err != nil {
+		return tx, fmt.Errorf("failed to retrieve DNS nodes: %v", err.Error())
+	}
+
+	randomNode := nodes[getRandomInt(len(nodes)-1)]
+
+	url := randomNode.Host + "/transactions"
 
 	jsonTx, err := json.Marshal(tx)
 	if err != nil {

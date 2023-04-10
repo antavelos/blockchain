@@ -2,46 +2,67 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 
 	bc "github.com/antavelos/blockchain/src/blockchain"
+	"github.com/antavelos/blockchain/src/db"
 
 	"github.com/gin-gonic/gin"
 )
 
-var nodes []bc.Node = []bc.Node{
-	{
-		Host: "http://localhost:3001",
-	},
-	{
-		Host: "http://localhost:3002",
-	},
-	{
-		Host: "http://localhost:3003",
-	},
-	// {
-	// 	Host: "http://localhost:3004",
-	// },
-	// {
-	// 	Host: "http://localhost:3005",
-	// },
+var port string = os.Getenv("PORT")
+
+func getNodeDb() *db.NodeDB {
+	return &db.NodeDB{Filename: os.Getenv("NODES_FILENAME")}
 }
 
-var host string = "localhost"
-var port string = "3000"
+func getNodes(c *gin.Context) {
+	ndb := getNodeDb()
 
-func Nodes(c *gin.Context) {
+	nodes, err := ndb.LoadNodes()
+	if err != nil {
+		log.Printf("nodes not available: %v", err.Error())
+		c.IndentedJSON(http.StatusInternalServerError, "nodes not available")
+		return
+	}
+
 	c.IndentedJSON(http.StatusOK, nodes)
+}
+
+func addNode(c *gin.Context) {
+	ndb := getNodeDb()
+
+	var node bc.Node
+	if err := c.BindJSON(&node); err != nil {
+		log.Printf("invalid input: %v", err.Error())
+		c.IndentedJSON(http.StatusBadRequest, "invalid input")
+		return
+	}
+
+	err := ndb.AddNode(node)
+	if err != nil {
+		log.Printf("failed to add node: %v", err.Error())
+		c.IndentedJSON(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, node)
 }
 
 func initRouter() *gin.Engine {
 	router := gin.Default()
-	router.GET("/nodes", Nodes)
+
+	router.SetTrustedProxies([]string{"localhost", "127.0.0.1"})
+
+	router.GET("/nodes", getNodes)
+	router.POST("/nodes", addNode)
 
 	return router
 }
 
 func main() {
 	router := initRouter()
-	router.Run(fmt.Sprintf("%v:%v", host, port))
+	router.Run(fmt.Sprintf(":%v", port))
 }
