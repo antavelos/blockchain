@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	bc "github.com/antavelos/blockchain/src/blockchain"
@@ -13,6 +15,10 @@ import (
 
 func getDnsHost() string {
 	return fmt.Sprintf("http://%v:%v", os.Getenv("DNS_HOST"), os.Getenv("DNS_PORT"))
+}
+
+func getWalletsHost() string {
+	return fmt.Sprintf("http://%v:%v", os.Getenv("WALLETS_HOST"), os.Getenv("WALLETS_PORT"))
 }
 
 func getSelfHost() string {
@@ -59,11 +65,13 @@ func main() {
 func initNode() {
 	IntroduceToDns()
 
-	getDNSNodes()
+	GetDnsNodes()
 
-	Ping()
+	PingNodes()
 
 	ResolveLongestBlockchain()
+
+	GetNewWallet()
 }
 
 func runMiningLoop() {
@@ -81,6 +89,12 @@ func runMiningLoop() {
 
 		} else {
 			InfoLogger.Printf("New block [OK]: %v", block.Idx)
+
+			err := reward()
+			if err != nil {
+				ErrorLogger.Printf("Failed to reward node: %v", err.Error())
+			}
+
 		}
 
 		time.Sleep(5 * time.Second)
@@ -88,21 +102,30 @@ func runMiningLoop() {
 	}
 }
 
-func getDNSNodes() []bc.Node {
-	ndb := getNodeDb()
-
-	nodes, err := GetDnsNodes()
+func reward() error {
+	wallet, err := ioGetWallet()
 	if err != nil {
-		log.Fatalf("Couldn't retrieve nodes from DNS %v", err.Error())
+		return fmt.Errorf("node wallet not available: %v", err)
 	}
 
-	nodes = Filter(nodes, func(n bc.Node) bool {
-		return n.GetPort() != getSelfPort()
-	})
-
-	if err := ndb.SaveNodes(nodes); err != nil {
-		log.Printf("Couldn't save nodes received from DNS.")
+	tx := bc.Transaction{
+		Body: bc.TransactionBody{
+			Sender:    "0",
+			Recipient: hex.EncodeToString(wallet.Address),
+			Amount:    1.0,
+		},
 	}
 
-	return nodes
+	tx, err = ioAddTx(tx)
+	if err != nil {
+		return fmt.Errorf("failed to add reward transaction: %v", err.Error())
+	}
+
+	nodeErrors := ShareTx(tx)
+	errorStrings := ErrorsToStrings(nodeErrors)
+	if len(errorStrings) > 0 {
+		return fmt.Errorf("failed to share the transaction with other nodes: \n%v", strings.Join(errorStrings, "\n"))
+	}
+
+	return nil
 }

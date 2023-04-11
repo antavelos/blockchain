@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"sync"
 
 	bc "github.com/antavelos/blockchain/src/blockchain"
+	"github.com/antavelos/blockchain/src/wallet"
 )
 
 func getBlockchain(node bc.Node) (*bc.Blockchain, error) {
@@ -33,7 +35,59 @@ func getBlockchain(node bc.Node) (*bc.Blockchain, error) {
 	return &blockchain, nil
 }
 
-func GetDnsNodes() ([]bc.Node, error) {
+func getNewWallet() (wallet.Wallet, error) {
+	var wallet wallet.Wallet
+	url := getWalletsHost() + "/wallets/new"
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return wallet, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return wallet, err
+	}
+
+	if err := json.Unmarshal(body, &wallet); err != nil {
+		return wallet, err
+	}
+
+	return wallet, nil
+}
+
+func GetNewWallet() error {
+	wallet, err := getNewWallet()
+	if err != nil {
+		return err
+	}
+
+	wdb := getWalletDb()
+
+	return wdb.SaveWallet(wallet)
+}
+
+func GetDnsNodes() []bc.Node {
+	ndb := getNodeDb()
+
+	nodes, err := retrieveDnsNodes()
+	if err != nil {
+		log.Fatalf("Couldn't retrieve nodes from DNS %v", err.Error())
+	}
+
+	nodes = Filter(nodes, func(n bc.Node) bool {
+		return n.GetPort() != getSelfPort()
+	})
+
+	if err := ndb.SaveNodes(nodes); err != nil {
+		log.Printf("Couldn't save nodes received from DNS.")
+	}
+
+	return nodes
+}
+
+func retrieveDnsNodes() ([]bc.Node, error) {
 	var nodes []bc.Node
 	url := getDnsHost() + "/nodes"
 
@@ -175,7 +229,7 @@ func postData(url string, data []byte) ([]byte, error) {
 		return nil, fmt.Errorf(string(body))
 	}
 
-	return io.ReadAll(resp.Body)
+	return body, nil
 }
 
 func (pnb PingNodesBroadcaster) Broadcast() error {
@@ -189,7 +243,7 @@ func (pnb PingNodesBroadcaster) Broadcast() error {
 
 	body, err := postData(pnb.Url, jsonSelfNode)
 	if err != nil {
-		return fmt.Errorf("node %v: %v", pnb.Node.Host, string(body))
+		return fmt.Errorf("%v", string(body))
 	}
 
 	var nodes []bc.Node
@@ -273,7 +327,9 @@ func BroadcastNodes(nbs []NodeBroadcaster) []error {
 
 	resultErrors := make([]error, 0)
 	for ch := range errorsChan {
-		resultErrors = append(resultErrors, ch)
+		if ch != nil {
+			resultErrors = append(resultErrors, ch)
+		}
 	}
 
 	return resultErrors
@@ -311,7 +367,7 @@ func ShareBlock(block bc.Block) []error {
 	return BroadcastNodes(txnb)
 }
 
-func Ping() []error {
+func PingNodes() []error {
 	ndb := getNodeDb()
 
 	nodes, err := ndb.LoadNodes()

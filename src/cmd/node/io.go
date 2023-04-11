@@ -7,6 +7,7 @@ import (
 
 	bc "github.com/antavelos/blockchain/src/blockchain"
 	"github.com/antavelos/blockchain/src/db"
+	"github.com/antavelos/blockchain/src/wallet"
 )
 
 func getBlockchainDb() *db.BlockchainDB {
@@ -15,6 +16,10 @@ func getBlockchainDb() *db.BlockchainDB {
 
 func getNodeDb() *db.NodeDB {
 	return &db.NodeDB{Filename: os.Getenv("NODES_FILENAME")}
+}
+
+func getWalletDb() *db.WalletDB {
+	return &db.WalletDB{Filename: os.Getenv("WALLET_FILENAME")}
 }
 
 func ioAddTx(tx bc.Transaction) (bc.Transaction, error) {
@@ -71,4 +76,18 @@ func ioNewBlockchain() {
 	blockchain := bc.NewBlockchain()
 
 	dbd.SaveBlockchain(*blockchain)
+}
+
+func ioGetWallet() (wallet.Wallet, error) {
+	wdb := getWalletDb()
+	wallets, err := wdb.LoadWallets()
+	if err != nil {
+		return wallet.Wallet{}, err
+	}
+
+	if len(wallets) == 0 {
+		return wallet.Wallet{}, errors.New("no wallets available")
+	}
+
+	return wallets[0], nil
 }

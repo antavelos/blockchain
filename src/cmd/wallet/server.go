@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func apiAddWallet(c *gin.Context) {
+func apiNewWallet(c *gin.Context) {
 	wdb := getWalletDb()
 
 	wallet, err := wdb.CreateWallet()
@@ -24,7 +24,7 @@ func InitRouter() *gin.Engine {
 
 	router.SetTrustedProxies([]string{"localhost", "127.0.0.1"})
 
-	router.POST("/wallets", apiAddWallet)
+	router.GET("/wallets/new", apiNewWallet)
 
 	return router
 }

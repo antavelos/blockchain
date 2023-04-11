@@ -4,16 +4,17 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	bc "github.com/antavelos/blockchain/src/blockchain"
-	"github.com/antavelos/blockchain/src/crypto"
 	"github.com/antavelos/blockchain/src/wallet"
 )
 
@@ -21,25 +22,14 @@ var port string = os.Getenv("PORT")
 
 func main() {
 	simulate := flag.Bool("simulate", false, "simulates new wallets' and transactions'")
-	serve := flag.Bool("serve", false, "runs as server by serving new wallets' requests")
 
 	flag.Parse()
 
-	if *simulate && *serve {
-		ErrorLogger.Fatal("Cannot do both simulate and serve. Exiting.")
-	}
-
-	if !*simulate && !*serve {
-		ErrorLogger.Fatal("No action was chosen. Possible actions: 1) simulate, 2) serve. Exiting.")
-	}
-
 	if *simulate {
-		runSimulation()
+		go runSimulation()
 	}
 
-	if *serve {
-		runServer()
-	}
+	runServer()
 }
 
 func runServer() {
@@ -49,10 +39,12 @@ func runServer() {
 
 func runSimulation() {
 	wdb := getWalletDb()
+	walletCreationIntervalInSec, _ := strconv.Atoi(os.Getenv("WALLET_CREATION_INTERVAL_IN_SEC"))
+	txCreationIntervalInSec, _ := strconv.Atoi(os.Getenv("TRANSACTION_CREATION_INTERVAL_IN_SEC"))
 
 	i := 0
 	for {
-		if i%300 == 0 {
+		if i%walletCreationIntervalInSec == 0 {
 			w, err := wdb.CreateWallet()
 			if err != nil {
 				ErrorLogger.Printf("New wallet [FAIL]: %v", err.Error())
@@ -61,8 +53,13 @@ func runSimulation() {
 			}
 		}
 
-		if i%2 == 0 {
+		if i%txCreationIntervalInSec == 0 {
 			tx, err := createTransaction()
+			if err != nil {
+				ErrorLogger.Printf("Failed to create new transaction: %v", err.Error())
+			}
+
+			tx, err = sendTransaction(tx)
 			if err != nil {
 				ErrorLogger.Printf("Transaction from %v to %v [FAIL]: %v", tx.Body.Sender, tx.Body.Recipient, err.Error())
 			} else {
@@ -127,28 +124,7 @@ func createTransaction() (bc.Transaction, error) {
 	senderWallet := randomWallets[0]
 	recipientWallet := randomWallets[1]
 
-	txb := bc.TransactionBody{
-		Sender:    hex.EncodeToString(senderWallet.Address),
-		Recipient: hex.EncodeToString(recipientWallet.Address),
-		Amount:    getRandomFloat(0.001, 0.1),
-	}
-
-	txbBytes, err := json.Marshal(txb)
-	if err != nil {
-		return bc.Transaction{}, fmt.Errorf("failed to marshal transaction body: %v", err)
-	}
-
-	signature, err := senderWallet.Sign(crypto.HashData(txbBytes))
-	if err != nil {
-		return bc.Transaction{}, fmt.Errorf("failed to sign transaction body: %v", err)
-	}
-
-	tx := bc.Transaction{
-		Body:      txb,
-		Signature: signature,
-	}
-
-	return sendTransaction(tx)
+	return bc.NewTransaction(senderWallet, recipientWallet, getRandomFloat(0.001, 0.1))
 }
 
 func getDnsHost() string {
@@ -184,6 +160,10 @@ func sendTransaction(tx bc.Transaction) (bc.Transaction, error) {
 		return tx, fmt.Errorf("failed to retrieve DNS nodes: %v", err.Error())
 	}
 
+	if len(nodes) == 0 {
+		return tx, errors.New("DNS nodes not available")
+	}
+
 	randomNode := nodes[getRandomInt(len(nodes)-1)]
 
 	url := randomNode.Host + "/transactions"
@@ -204,7 +184,7 @@ func sendTransaction(tx bc.Transaction) (bc.Transaction, error) {
 		return tx, err
 	}
 
-	if resp.StatusCode != 201 {
+	if resp.StatusCode != http.StatusCreated {
 		return tx, fmt.Errorf("%v", string(body))
 	}
 

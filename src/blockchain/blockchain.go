@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/antavelos/blockchain/src/crypto"
+	"github.com/antavelos/blockchain/src/wallet"
 	"github.com/google/uuid"
 )
 
@@ -67,12 +68,28 @@ type Blockchain struct {
 	TxPool []Transaction `json:"txPool"`
 }
 
-func NewTransactionBody(sender string, recipient string, amount float64) *TransactionBody {
-	return &TransactionBody{
-		Sender:    sender,
-		Recipient: recipient,
+func NewTransaction(senderWallet wallet.Wallet, recipientWallet wallet.Wallet, amount float64) (Transaction, error) {
+
+	txb := TransactionBody{
+		Sender:    hex.EncodeToString(senderWallet.Address),
+		Recipient: hex.EncodeToString(recipientWallet.Address),
 		Amount:    amount,
 	}
+
+	txbBytes, err := json.Marshal(txb)
+	if err != nil {
+		return Transaction{}, fmt.Errorf("failed to marshal transaction body: %v", err)
+	}
+
+	signature, err := senderWallet.Sign(crypto.HashData(txbBytes))
+	if err != nil {
+		return Transaction{}, fmt.Errorf("failed to sign transaction body: %v", err)
+	}
+
+	return Transaction{
+		Body:      txb,
+		Signature: signature,
+	}, nil
 }
 
 func (tx Transaction) GetBodyHash() ([]byte, error) {

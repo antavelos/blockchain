@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -29,11 +30,9 @@ func Mine() (bc.Block, error) {
 	}
 
 	nodeErrors := ShareBlock(block)
-	if nodeErrors != nil {
+	if len(nodeErrors) > 0 {
 		errorStrings := ErrorsToStrings(nodeErrors)
-		if len(errorStrings) > 0 {
-			ErrorLogger.Printf("Failed to share the block with other nodes: \n%v", strings.Join(errorStrings, "\n"))
-		}
+		return bc.Block{}, fmt.Errorf("failed to share the block with other nodes: \n%v", strings.Join(errorStrings, "\n"))
 	}
 
 	nodes, _ := ndb.LoadNodes()

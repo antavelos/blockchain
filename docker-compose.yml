@@ -20,6 +20,7 @@ services:
     container_name: bc_node_1
     depends_on:
       - dns
+      - wallets
     ports:
       - 3001:3001
     environment:
@@ -29,6 +30,7 @@ services:
     volumes:
       - ./data/blockchain_1.json:/data/blockchain.json
       - ./data/nodes_1.json:/data/nodes.json
+      - ./data/wallet_1.json:/data/wallet.json
     command: /app/cmd/node/node
     networks:
       - blockchain
@@ -38,6 +40,7 @@ services:
     container_name: bc_node_2
     depends_on:
       - dns
+      - wallets
       - node-server-1
     ports:
       - 3002:3002
@@ -48,6 +51,7 @@ services:
     volumes:
       - ./data/blockchain_2.json:/data/blockchain.json
       - ./data/nodes_2.json:/data/nodes.json
+      - ./data/wallet_2.json:/data/wallet.json
     command: /app/cmd/node/node
     networks:
       - blockchain
@@ -57,6 +61,7 @@ services:
     container_name: bc_node_3_miner
     depends_on:
       - dns
+      - wallets
       - node-server-2
     ports:
       - 3003:3003
@@ -67,6 +72,7 @@ services:
     volumes:
       - ./data/blockchain_3.json:/data/blockchain.json
       - ./data/nodes_3.json:/data/nodes.json
+      - ./data/wallet_3.json:/data/wallet.json
     command: /app/cmd/node/node -mine
     networks:
       - blockchain
@@ -76,6 +82,7 @@ services:
     container_name: bc_node_4_miner
     depends_on:
       - dns
+      - wallets
       - node-server-3
     ports:
       - 3004:3004
@@ -86,6 +93,7 @@ services:
     volumes:
       - ./data/blockchain_4.json:/data/blockchain.json
       - ./data/nodes_4.json:/data/nodes.json
+      - ./data/wallet_4.json:/data/wallet.json
     command: /app/cmd/node/node -mine
     networks:
       - blockchain
@@ -95,6 +103,7 @@ services:
     container_name: bc_node_5_miner
     depends_on:
       - dns
+      - wallets
       - node-server-4
     ports:
       - 3005:3005
@@ -105,6 +114,7 @@ services:
     volumes:
       - ./data/blockchain_5.json:/data/blockchain.json
       - ./data/nodes_5.json:/data/nodes.json
+      - ./data/wallet_5.json:/data/wallet.json
     command: /app/cmd/node/node -mine
     networks:
       - blockchain
@@ -114,7 +124,6 @@ services:
     container_name: wallets
     depends_on:
       - dns
-      - node-server-5
     ports:
       - 4000:4000
     environment:
@@ -122,6 +131,8 @@ services:
       - DNS_HOST=dns
       - DNS_PORT=3000
       - WALLETS_FILENAME=/data/wallets.json
+      - WALLET_CREATION_INTERVAL_IN_SEC=300
+      - TRANSACTION_CREATION_INTERVAL_IN_SEC=2
     volumes:
       - ./data/wallets.json:/data/wallets.json
     command: /app/cmd/wallet/wallet -simulate
