@@ -157,8 +157,6 @@ func initRouter() *gin.Engine {
 
 	router.SetTrustedProxies([]string{"localhost", "127.0.0.1"})
 
-	router.LoadHTMLGlob("cmd/node/templates/*")
-
 	router.POST(transactionsURL, apiAddTx)
 	router.POST(sharedTransactionsURL, apiAddSharedTx)
 	router.POST(sharedBlocksURL, apiAddSharedBlock)

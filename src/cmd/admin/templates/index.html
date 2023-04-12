@@ -10,29 +10,9 @@
 			<h1>
 				<a href="/"> {{ .title }}</a>
 			</h1>
-			<button type="button" @click="mine">Mine</button>
-			<br />
-			<button type="button" @click="resolveBlockchain">Resolve blockchain</button>
-			<br />
-
-			<h4>New transaction</h4>
-			<div>
-				<form @submit.prevent="submitForm">
-					<label for="sender">Sender:</label>
-					<input type="text" v-model="sender"><br>
-
-					<label for="recipient">Recipient:</label>
-					<input type="text" v-model="recipient"><br>
-
-					<label for="amount">Amount:</label>
-					<input type="amount" v-model="amount"><br>
-
-					<button type="submit">Submit</button>
-				</form>
-			</div>
 			<div>
 				<pre><code>
-				<!-- {{ .chain }} -->
+				{{ .blockchain }}
 				</code></pre>
 			</div>
 		</div>
@@ -41,55 +21,8 @@
 			new Vue({
 				el: '#app',
 				data: {
-					sender: '',
-					recipient: '',
-					amount: null
 				},
 				methods: {
-					submitForm: function() {
-						const data = {
-							"sender": this.sender,
-							"recipient": this.recipient,
-							"amount": parseInt(this.amount)
-						};
-
-						const jsonData = JSON.stringify(data);
-
-						console.log(jsonData);
-
-						// Send the data to the server using axios
-						axios.post('/transactions', jsonData, {
-							headers: {
-								'Content-Type': 'application/json'
-							}
-						})
-						.then(function(response) {
-							window.location = window.location
-						})
-						.catch(function(error) {
-							window.location = window.location
-						});
-					},
-					mine: function() {
-						axios.get('/mine')
-						.then(function(response) {
-							window.location = window.location
-						})
-						.then(function(error) {
-							console.log(error);
-							window.location = window.location
-						})
-					},
-					resolveBlockchain: function() {
-						axios.get('/resolve')
-						.then(function(response) {
-							window.location = window.location
-						})
-						.then(function(error) {
-							console.log(error);
-							window.location = window.location
-						})
-					},
 				}
 			});
 		</script>
