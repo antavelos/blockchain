@@ -14,10 +14,11 @@
 # Dependency directories (remove the comment below to include it)
 vendor/
 
+# static db files
 data/
-blockchain*.json
-nodes*.json
-wallets*.json
+
+# executables
 src/cmd/dns/dns
 src/cmd/node/node
 src/cmd/wallet/wallet
+src/cmd/admin/admin

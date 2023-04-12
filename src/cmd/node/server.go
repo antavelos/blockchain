@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -133,29 +132,6 @@ func apiPing(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, nodes)
 }
 
-func index(c *gin.Context) {
-	bdb := getBlockchainDb()
-
-	blockchain, err := bdb.LoadBlockchain()
-	if err != nil {
-		ErrorLogger.Println(err.Error())
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	marshalled, err := json.MarshalIndent(blockchain, "", "  ")
-	if err != nil {
-		ErrorLogger.Println(err.Error())
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.HTML(http.StatusOK, "index.tmpl", gin.H{
-		"title": "Blockchain",
-		"chain": string(marshalled),
-	})
-}
-
 func apiResolve(c *gin.Context) {
 	bdb := getBlockchainDb()
 
@@ -187,7 +163,6 @@ func initRouter() *gin.Engine {
 	router.POST(sharedTransactionsURL, apiAddSharedTx)
 	router.POST(sharedBlocksURL, apiAddSharedBlock)
 	router.POST(pingURL, apiPing)
-	router.GET(indexURL, index)
 	router.GET(blockchainURL, apiGetBlockchain)
 	router.GET(mineURL, apiMine)
 	router.GET(resolveURL, apiResolve)
