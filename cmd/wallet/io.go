@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/antavelos/blockchain/src/db"
+	"github.com/antavelos/blockchain/pkg/db"
 )
 
 func getWalletDb() *db.WalletDB {

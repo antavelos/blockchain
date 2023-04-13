@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"sync"
 
-	bc "github.com/antavelos/blockchain/src/blockchain"
-	"github.com/antavelos/blockchain/src/wallet"
+	bc "github.com/antavelos/blockchain/pkg/blockchain"
+	"github.com/antavelos/blockchain/pkg/wallet"
 )
 
 func getBlockchain(node bc.Node) (*bc.Blockchain, error) {

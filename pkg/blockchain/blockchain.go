@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/antavelos/blockchain/src/crypto"
-	"github.com/antavelos/blockchain/src/wallet"
+	"github.com/antavelos/blockchain/pkg/crypto"
+	"github.com/antavelos/blockchain/pkg/wallet"
 	"github.com/google/uuid"
 )
 

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os"
 
-	bc "github.com/antavelos/blockchain/src/blockchain"
-	"github.com/antavelos/blockchain/src/db"
+	bc "github.com/antavelos/blockchain/pkg/blockchain"
+	"github.com/antavelos/blockchain/pkg/db"
 
 	"github.com/gin-gonic/gin"
 )

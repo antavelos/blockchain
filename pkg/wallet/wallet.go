@@ -3,7 +3,7 @@ package wallet
 import (
 	"encoding/hex"
 
-	"github.com/antavelos/blockchain/src/crypto"
+	"github.com/antavelos/blockchain/pkg/crypto"
 )
 
 type Wallet struct {

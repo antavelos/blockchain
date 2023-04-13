@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	bc "github.com/antavelos/blockchain/src/blockchain"
+	bc "github.com/antavelos/blockchain/pkg/blockchain"
 )
 
 func Mine() (bc.Block, error) {

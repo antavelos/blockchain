@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	bc "github.com/antavelos/blockchain/src/blockchain"
-	"github.com/antavelos/blockchain/src/wallet"
+	bc "github.com/antavelos/blockchain/pkg/blockchain"
+	"github.com/antavelos/blockchain/pkg/wallet"
 )
 
 type DB struct {

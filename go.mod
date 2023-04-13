@@ -1,4 +1,4 @@
-module github.com/antavelos/blockchain/src
+module github.com/antavelos/blockchain
 
 go 1.19
 

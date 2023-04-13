@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"os"
 
-	bc "github.com/antavelos/blockchain/src/blockchain"
-	cn "github.com/antavelos/blockchain/src/common"
+	bc "github.com/antavelos/blockchain/pkg/blockchain"
+	cn "github.com/antavelos/blockchain/pkg/common"
 
 	"github.com/gin-gonic/gin"
 )

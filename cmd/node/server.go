@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	bc "github.com/antavelos/blockchain/src/blockchain"
+	bc "github.com/antavelos/blockchain/pkg/blockchain"
 
 	"github.com/gin-gonic/gin"
 )

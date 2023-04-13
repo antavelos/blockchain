@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	bc "github.com/antavelos/blockchain/src/blockchain"
+	bc "github.com/antavelos/blockchain/pkg/blockchain"
 )
 
 func getDnsHost() string {

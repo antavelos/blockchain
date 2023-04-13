@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"time"
 
-	bc "github.com/antavelos/blockchain/src/blockchain"
-	"github.com/antavelos/blockchain/src/wallet"
+	bc "github.com/antavelos/blockchain/pkg/blockchain"
+	"github.com/antavelos/blockchain/pkg/wallet"
 )
 
 var port string = os.Getenv("PORT")
