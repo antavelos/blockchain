@@ -2,28 +2,15 @@ package main
 
 import (
 	"errors"
-	"os"
 	"sync"
 
-	bc "github.com/antavelos/blockchain/pkg/blockchain"
 	"github.com/antavelos/blockchain/pkg/db"
-	"github.com/antavelos/blockchain/pkg/wallet"
+	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
+	"github.com/antavelos/blockchain/pkg/models/wallet"
 )
 
-func getBlockchainDb() *db.BlockchainDB {
-	return &db.BlockchainDB{Filename: os.Getenv("BLOCKCHAIN_FILENAME")}
-}
-
-func getNodeDb() *db.NodeDB {
-	return &db.NodeDB{Filename: os.Getenv("NODES_FILENAME")}
-}
-
-func getWalletDb() *db.WalletDB {
-	return &db.WalletDB{Filename: os.Getenv("WALLET_FILENAME")}
-}
-
 func ioAddTx(tx bc.Transaction) (bc.Transaction, error) {
-	bdb := getBlockchainDb()
+	bdb := db.GetBlockchainDb()
 	m := sync.Mutex{}
 
 	m.Lock()
@@ -47,7 +34,7 @@ func ioAddTx(tx bc.Transaction) (bc.Transaction, error) {
 }
 
 func ioAddBlock(block bc.Block) (bc.Block, error) {
-	bdb := getBlockchainDb()
+	bdb := db.GetBlockchainDb()
 	m := sync.Mutex{}
 
 	m.Lock()
@@ -71,7 +58,7 @@ func ioAddBlock(block bc.Block) (bc.Block, error) {
 }
 
 func ioNewBlockchain() {
-	dbd := getBlockchainDb()
+	dbd := db.GetBlockchainDb()
 
 	blockchain := bc.NewBlockchain()
 
@@ -79,7 +66,7 @@ func ioNewBlockchain() {
 }
 
 func ioGetWallet() (wallet.Wallet, error) {
-	wdb := getWalletDb()
+	wdb := db.GetWalletDb()
 	wallets, err := wdb.LoadWallets()
 	if err != nil {
 		return wallet.Wallet{}, err

@@ -12,8 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/antavelos/blockchain/pkg/crypto"
-	"github.com/antavelos/blockchain/pkg/wallet"
+	"github.com/antavelos/blockchain/pkg/lib/crypto"
+	"github.com/antavelos/blockchain/pkg/common"
+	"github.com/antavelos/blockchain/pkg/lib/rest"
+	"github.com/antavelos/blockchain/pkg/models/wallet"
 	"github.com/google/uuid"
 )
 
@@ -32,14 +34,6 @@ func getTxsPerBlock() int {
 	}
 
 	return txsPerBlock
-}
-
-type Node struct {
-	Host string `json:"host"`
-}
-
-func (n Node) GetPort() string {
-	return n.Host[len(n.Host)-4:]
 }
 
 type TransactionBody struct {
@@ -66,6 +60,36 @@ type Block struct {
 type Blockchain struct {
 	Blocks []Block       `json:"block"`
 	TxPool []Transaction `json:"txPool"`
+}
+
+type TxMarshaller rest.ObjectMarshaller
+
+func (tm TxMarshaller) Unmarshal(data []byte) (any, error) {
+	var target any
+	if tm.Many {
+		target = make([]Transaction, 0)
+	} else {
+		target = Transaction{}
+	}
+
+	err := json.Unmarshal(data, &target)
+
+	return target, err
+}
+
+type BlockchainMarshaller rest.ObjectMarshaller
+
+func (bm BlockchainMarshaller) Unmarshal(data []byte) (any, error) {
+	var target any
+	if bm.Many {
+		target = make([]Blockchain, 0)
+	} else {
+		target = Blockchain{}
+	}
+
+	err := json.Unmarshal(data, &target)
+
+	return target, err
 }
 
 func NewTransaction(senderWallet wallet.Wallet, recipientWallet wallet.Wallet, amount float64) (Transaction, error) {
@@ -205,13 +229,29 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 		Nonce:     0,
 	}
 
-	log.Printf("Mining...")
+	common.InfoLogger.Printf("Mining...")
 	for !blockSatisfiesHashRule(newBlock) {
 		newBlock.Nonce += 1
 	}
-	log.Printf("Found Nonce: %v", newBlock.Nonce)
+	common.InfoLogger.Printf("Found Nonce: %v", newBlock.Nonce)
 
 	return newBlock, nil
+}
+
+func GetMaxLengthBlockchain(blockchains []*Blockchain) *Blockchain {
+	if len(blockchains) == 0 {
+		return &Blockchain{}
+	}
+
+	maxLengthBlockchain := blockchains[0]
+
+	for _, blockchain := range blockchains[1:] {
+		if maxLengthBlockchain == nil || len(blockchain.Blocks) > len(maxLengthBlockchain.Blocks) {
+			maxLengthBlockchain = blockchain
+		}
+	}
+
+	return maxLengthBlockchain
 }
 
 func blockSatisfiesHashRule(block Block) bool {

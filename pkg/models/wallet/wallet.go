@@ -2,14 +2,31 @@ package wallet
 
 import (
 	"encoding/hex"
+	"encoding/json"
 
-	"github.com/antavelos/blockchain/pkg/crypto"
+	"github.com/antavelos/blockchain/pkg/lib/crypto"
+	"github.com/antavelos/blockchain/pkg/lib/rest"
 )
 
 type Wallet struct {
 	Address    []byte `json:"address"`
 	PrivateKey []byte `json:"privateKey"`
 	PublicKey  []byte `json:"publicKey"`
+}
+
+type WalletMarshaller rest.ObjectMarshaller
+
+func (nm WalletMarshaller) Unmarshal(data []byte) (any, error) {
+	var target any
+	if nm.Many {
+		target = make([]Wallet, 0)
+	} else {
+		target = Wallet{}
+	}
+
+	err := json.Unmarshal(data, &target)
+
+	return target, err
 }
 
 func NewWallet() (*Wallet, error) {

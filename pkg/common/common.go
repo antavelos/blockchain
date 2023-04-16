@@ -2,7 +2,9 @@ package common
 
 import (
 	"log"
+	"math/rand"
 	"os"
+	"time"
 )
 
 var InfoLogger *log.Logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
@@ -42,4 +44,20 @@ func ErrorsToStrings(err []error) []string {
 			return err.Error()
 		})
 
+}
+
+func GetRandomInt(numRange int) int {
+	if numRange == 0 {
+		return 0
+	}
+
+	rand.Seed(time.Now().UnixNano())
+
+	return rand.Intn(numRange)
+}
+
+func GetRandomFloat(min, max float64) float64 {
+	rand.Seed(time.Now().UnixNano())
+
+	return min + rand.Float64()*(max-min)
 }
