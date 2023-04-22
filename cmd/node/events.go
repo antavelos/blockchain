@@ -21,7 +21,7 @@ func shareTxHandler(event bus.DataEvent) {
 	nodes, _ := ndb.LoadNodes()
 	responses := node_client.ShareTx(nodes, tx)
 	if responses.ErrorsRatio() > 0 {
-		common.ErrorLogger.Printf("Failed to share the transaction with some nodes: \n%v", responses.ErrorStrings())
+		common.LogError("Failed to share the transaction with some nodes: \n%v", responses.ErrorStrings())
 	}
 }
 

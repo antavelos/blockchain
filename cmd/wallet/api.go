@@ -15,7 +15,7 @@ func apiNewWallet(c *gin.Context) {
 
 	wallet, err := wdb.CreateWallet()
 	if err != nil {
-		common.ErrorLogger.Printf("New wallet [FAIL]"}
+		common.LogError("New wallet [FAIL]", err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "failed to create a new wallet"})
 		return
 	}

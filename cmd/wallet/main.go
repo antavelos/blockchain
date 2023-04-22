@@ -12,7 +12,6 @@ import (
 	dns_client "github.com/antavelos/blockchain/pkg/clients/dns"
 	node_client "github.com/antavelos/blockchain/pkg/clients/node"
 	"github.com/antavelos/blockchain/pkg/common"
-	com "github.com/antavelos/blockchain/pkg/common"
 	"github.com/antavelos/blockchain/pkg/db"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 	w "github.com/antavelos/blockchain/pkg/models/wallet"
@@ -47,23 +46,23 @@ func runSimulation() {
 		if i%walletCreationIntervalInSec == 0 {
 			w, err := wdb.CreateWallet()
 			if err != nil {
-				com.ErrorLogger.Printf("New wallet [FAIL]"}
+				common.LogError("New wallet [FAIL]", err.Error())
 			} else {
-				com.InfoLogger.Printf("New wallet [OK]: %v", hex.EncodeToString(w.Address))
+				common.LogInfo("New wallet [OK]: %v", hex.EncodeToString(w.Address))
 			}
 		}
 
 		if i%txCreationIntervalInSec == 0 {
 			tx, err := createTransaction()
 			if err != nil {
-				com.ErrorLogger.Printf("Failed to create new transaction"}
+				common.LogError("Failed to create new transaction", err.Error())
 			}
 
 			tx, err = sendTransaction(tx)
 			if err != nil {
-				com.ErrorLogger.Printf("Transaction from %v to %v [FAIL]: %v", tx.Body.Sender, tx.Body.Recipient, err.Error())
+				common.LogError("Transaction from %v to %v [FAIL]: %v", tx.Body.Sender, tx.Body.Recipient, err.Error())
 			} else {
-				com.InfoLogger.Printf("Transaction from %v to %v [OK]: %v", tx.Body.Sender, tx.Body.Recipient, tx.Id)
+				common.LogInfo("Transaction from %v to %v [OK]: %v", tx.Body.Sender, tx.Body.Recipient, tx.Id)
 			}
 		}
 
@@ -83,14 +82,14 @@ func getRandomWallets() ([]w.Wallet, error) {
 	lenWallets := len(wallets)
 
 	if len(wallets) == 0 {
-		return nil, common.GenericError{Msg: "no wallet yet")
+		return nil, common.GenericError{Msg: "no wallet yet"}
 	}
 
-	randomWallet1 := wallets[com.GetRandomInt(lenWallets-1)]
+	randomWallet1 := wallets[common.GetRandomInt(lenWallets-1)]
 
 	var randomWallet2 w.Wallet
 	for {
-		randomWallet2 = wallets[com.GetRandomInt(lenWallets-1)]
+		randomWallet2 = wallets[common.GetRandomInt(lenWallets-1)]
 
 		if !bytes.Equal(randomWallet2.Address, randomWallet1.Address) {
 			break
@@ -108,7 +107,7 @@ func createTransaction() (bc.Transaction, error) {
 	senderWallet := randomWallets[0]
 	recipientWallet := randomWallets[1]
 
-	return bc.NewTransaction(senderWallet, recipientWallet, com.GetRandomFloat(0.001, 0.1))
+	return bc.NewTransaction(senderWallet, recipientWallet, common.GetRandomFloat(0.001, 0.1))
 }
 
 func getDnsHost() string {
@@ -127,7 +126,7 @@ func sendTransaction(tx bc.Transaction) (bc.Transaction, error) {
 		return tx, common.GenericError{Msg: "nodes not available"}
 	}
 
-	randomNode := nodes[com.GetRandomInt(len(nodes)-1)]
+	randomNode := nodes[common.GetRandomInt(len(nodes)-1)]
 
 	response := node_client.SendTransaction(randomNode, tx)
 	if response.Err != nil {

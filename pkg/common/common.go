@@ -8,8 +8,30 @@ import (
 	"time"
 )
 
-var InfoLogger *log.Logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-var ErrorLogger *log.Logger = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+var infoLogger *log.Logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+var errorLogger *log.Logger = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+var fatalLogger *log.Logger = log.New(os.Stdout, "FATAL: ", log.Ldate|log.Ltime|log.Lshortfile)
+
+func logMessage(logger *log.Logger, msg string, v ...any) {
+	if len(v) == 0 {
+		logger.Println(msg)
+	} else {
+		msg = msg + ": "
+		logger.Printf(msg, v...)
+	}
+}
+func LogInfo(msg string, v ...any) {
+	logMessage(infoLogger, msg, v...)
+}
+
+func LogError(msg string, v ...any) {
+	logMessage(errorLogger, msg, v...)
+}
+
+func LogFatal(msg string, v ...any) {
+	logMessage(fatalLogger, msg, v...)
+	fatalLogger.Fatal()
+}
 
 type GenericError struct {
 	Msg   string
@@ -21,7 +43,7 @@ func (e GenericError) Error() string {
 	if e.Extra != nil {
 		msg = fmt.Sprintf("%v: %v", e.Msg, e.Extra.Error())
 	}
-	ErrorLogger.Println(msg)
+	LogError(msg)
 	return msg
 }
 

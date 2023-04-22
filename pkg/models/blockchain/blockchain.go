@@ -227,11 +227,11 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 		Nonce:     0,
 	}
 
-	common.InfoLogger.Printf("Mining...")
+	common.LogInfo("Mining...")
 	for !blockSatisfiesHashRule(newBlock) {
 		newBlock.Nonce += 1
 	}
-	common.InfoLogger.Printf("Found Nonce: %v", newBlock.Nonce)
+	common.LogInfo("Found Nonce: %v", newBlock.Nonce)
 
 	return newBlock, nil
 }

@@ -73,7 +73,7 @@ func main() {
 
 	err := initNode()
 	if err != nil {
-		common.ErrorLogger.Fatalf(err.Error())
+		common.LogFatal(err.Error())
 	}
 
 	if *mine {
@@ -102,7 +102,7 @@ func initNode() error {
 	// TODO: check if this step can be included in other calls
 	err = pingNodes()
 	if err != nil {
-		common.ErrorLogger.Printf("ping nodes error")
+		common.LogError("ping nodes error")
 	}
 
 	resolveLongestBlockchain()
@@ -171,22 +171,22 @@ func runMiningLoop() {
 	for {
 		block, err := Mine()
 		if err != nil {
-			common.ErrorLogger.Printf("New block [FAIL]")
+			common.LogError("New block [FAIL]")
 
-			common.InfoLogger.Println("Resolving longest blockchain")
+			common.LogInfo("Resolving longest blockchain")
 			err := resolveLongestBlockchain()
 			if err != nil {
-				common.ErrorLogger.Printf("Failed to resolve longest blockchain")
+				common.LogError("Failed to resolve longest blockchain")
 			}
 
 		} else {
-			common.InfoLogger.Printf("New block [OK]: %v", block.Idx)
+			common.LogInfo("New block [OK]: %v", block.Idx)
 
 			// TODO: check who should do the reward
 			//
 			err := rewardSelf()
 			if err != nil {
-				common.ErrorLogger.Printf("failed to create reward transaction: %v", err.Error())
+				common.LogError("failed to create reward transaction: %v", err.Error())
 			}
 		}
 

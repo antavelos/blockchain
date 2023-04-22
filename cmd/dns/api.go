@@ -17,7 +17,7 @@ func getNodes(c *gin.Context) {
 
 	nodes, err := ndb.LoadNodes()
 	if err != nil {
-		common.ErrorLogger.Printf("nodes not available"}
+		common.LogError("nodes not available", err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "nodes not available"})
 		return
 	}
@@ -30,14 +30,14 @@ func addNode(c *gin.Context) {
 
 	var node nd.Node
 	if err := c.BindJSON(&node); err != nil {
-		common.ErrorLogger.Printf("invalid input"}
+		common.LogError("invalid input", err.Error())
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 
 	err := ndb.AddNode(node)
 	if err != nil {
-		common.ErrorLogger.Printf("failed to add node"}
+		common.LogError("failed to add node", err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, err.Error())
 		return
 	}

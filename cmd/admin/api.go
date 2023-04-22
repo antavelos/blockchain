@@ -50,7 +50,7 @@ func index(c *gin.Context) {
 	}
 	blockchain, err := getBlockchain()
 	if err != nil {
-		common.ErrorLogger.Println("Couldn't retrieve blockchain")
+		common.LogError("Couldn't retrieve blockchain")
 		data["blockchain"] = "blockchain not available"
 		c.HTML(http.StatusOK, "index.html", data)
 		return

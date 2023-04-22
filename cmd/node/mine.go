@@ -21,7 +21,7 @@ func shareBlock(block bc.Block) error {
 	responses := node_client.ShareBlock(nodes, block)
 	if responses.ErrorsRatio() > 0 {
 		msg := fmt.Sprintf("new block was not accepted by some nodes: \n%v", strings.Join(responses.ErrorStrings(), "\n"))
-		common.ErrorLogger.Printf(msg)
+		common.LogError(msg)
 
 		if responses.ErrorsRatio() > 0.5 {
 			return common.GenericError{Msg: msg}

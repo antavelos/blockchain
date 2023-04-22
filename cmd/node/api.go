@@ -77,7 +77,7 @@ func addTx(c *gin.Context) {
 	// if nodeErrors := ShareTx(tx); nodeErrors != nil {
 	// 	errorStrings := ErrorsToStrings(nodeErrors)
 	// 	if len(errorStrings) > 0 {
-	// 		ErrorLogger.Printf("Failed to share the transaction with other nodes: \n%v", strings.Join(errorStrings, "\n"))
+	// 		LogError("Failed to share the transaction with other nodes: \n%v", strings.Join(errorStrings, "\n"))
 	// 	}
 	// }
 
@@ -104,18 +104,18 @@ func ping(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
-	common.InfoLogger.Printf("Ping from %#v", node.GetHost())
+	common.LogInfo("Ping from %#v", node.GetHost())
 
 	err := ndb.AddNode(node)
 	if err != nil {
-		common.ErrorLogger.Println(err.Error())
+		common.LogError(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	nodes, err := ndb.LoadNodes()
 	if err != nil {
-		common.ErrorLogger.Println(err.Error())
+		common.LogError(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
