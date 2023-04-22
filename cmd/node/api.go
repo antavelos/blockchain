@@ -5,6 +5,7 @@ import (
 
 	"github.com/antavelos/blockchain/pkg/common"
 	"github.com/antavelos/blockchain/pkg/db"
+	"github.com/antavelos/blockchain/pkg/lib/bus"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 	nd "github.com/antavelos/blockchain/pkg/models/node"
 
@@ -70,6 +71,7 @@ func addTx(c *gin.Context) {
 		return
 	}
 
+	bus.Publish(shareTxTopic, tx)
 	// TODO: publish event
 
 	// if nodeErrors := ShareTx(tx); nodeErrors != nil {

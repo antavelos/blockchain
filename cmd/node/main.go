@@ -14,6 +14,7 @@ import (
 	wallet_client "github.com/antavelos/blockchain/pkg/clients/wallet"
 	"github.com/antavelos/blockchain/pkg/common"
 	"github.com/antavelos/blockchain/pkg/db"
+	"github.com/antavelos/blockchain/pkg/lib/bus"
 	"github.com/antavelos/blockchain/pkg/lib/rest"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 	nd "github.com/antavelos/blockchain/pkg/models/node"
@@ -78,6 +79,8 @@ func main() {
 	if *mine {
 		go runMiningLoop()
 	}
+
+	go startEventLoop()
 
 	router := InitRouter()
 	router.Run(fmt.Sprintf(":%v", getSelfPort()))
@@ -177,14 +180,14 @@ func runMiningLoop() {
 			}
 
 		} else {
-			// TODO: publish event
 			common.InfoLogger.Printf("New block [OK]: %v", block.Idx)
 
-			err := reward()
+			// TODO: check who should do the reward
+			//
+			err := rewardSelf()
 			if err != nil {
-				common.ErrorLogger.Printf("Failed to reward node")
+				common.ErrorLogger.Printf("failed to create reward transaction: %v", err.Error())
 			}
-
 		}
 
 		time.Sleep(5 * time.Second)
@@ -192,13 +195,13 @@ func runMiningLoop() {
 	}
 }
 
-func reward() error {
+func rewardSelf() error {
 	wallet, err := ioGetWallet()
 	if err != nil {
-		return common.GenericError{Msg: "node wallet not available", Extra: err}
+		return err
 	}
 
-	tx := bc.Transaction{
+	rewardTx := bc.Transaction{
 		Body: bc.TransactionBody{
 			Sender:    "0",
 			Recipient: hex.EncodeToString(wallet.Address),
@@ -206,23 +209,7 @@ func reward() error {
 		},
 	}
 
-	tx, err = ioAddTx(tx)
-	if err != nil {
-		return common.GenericError{Msg: "failed to add reward transaction", Extra: err}
-	}
-
-	ndb := db.GetNodeDb()
-	nodes, err := ndb.LoadNodes()
-	if err != nil {
-		return common.GenericError{Msg: "failed to load nodes", Extra: err}
-	}
-
-	responses := node_client.ShareTx(nodes, tx)
-	if responses.ErrorsRatio() > 0 {
-		return common.GenericError{
-			Msg: fmt.Sprintf("failed to share the transaction with other nodes\n %v", strings.Join(responses.ErrorStrings(), "\n")),
-		}
-	}
+	bus.Publish(rewardTopic, rewardTx)
 
 	return nil
 }
