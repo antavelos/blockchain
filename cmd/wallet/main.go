@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -12,6 +11,7 @@ import (
 
 	dns_client "github.com/antavelos/blockchain/pkg/clients/dns"
 	node_client "github.com/antavelos/blockchain/pkg/clients/node"
+	"github.com/antavelos/blockchain/pkg/common"
 	com "github.com/antavelos/blockchain/pkg/common"
 	"github.com/antavelos/blockchain/pkg/db"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
@@ -47,7 +47,7 @@ func runSimulation() {
 		if i%walletCreationIntervalInSec == 0 {
 			w, err := wdb.CreateWallet()
 			if err != nil {
-				com.ErrorLogger.Printf("New wallet [FAIL]: %v", err.Error())
+				com.ErrorLogger.Printf("New wallet [FAIL]"}
 			} else {
 				com.InfoLogger.Printf("New wallet [OK]: %v", hex.EncodeToString(w.Address))
 			}
@@ -56,7 +56,7 @@ func runSimulation() {
 		if i%txCreationIntervalInSec == 0 {
 			tx, err := createTransaction()
 			if err != nil {
-				com.ErrorLogger.Printf("Failed to create new transaction: %v", err.Error())
+				com.ErrorLogger.Printf("Failed to create new transaction"}
 			}
 
 			tx, err = sendTransaction(tx)
@@ -77,13 +77,13 @@ func getRandomWallets() ([]w.Wallet, error) {
 
 	wallets, err := wdb.LoadWallets()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load wallets: %v", err.Error())
+		return nil, common.GenericError{Msg: "failed to load wallets"}
 	}
 
 	lenWallets := len(wallets)
 
 	if len(wallets) == 0 {
-		return nil, fmt.Errorf("no wallet yet")
+		return nil, common.GenericError{Msg: "no wallet yet")
 	}
 
 	randomWallet1 := wallets[com.GetRandomInt(lenWallets-1)]
@@ -120,11 +120,11 @@ func sendTransaction(tx bc.Transaction) (bc.Transaction, error) {
 
 	nodes, err := dns_client.GetDnsNodes(dnsHost)
 	if err != nil {
-		return tx, fmt.Errorf("failed to retrieve DNS nodes: %v", err.Error())
+		return tx, common.GenericError{Msg: "failed to retrieve DNS nodes"}
 	}
 
 	if len(nodes) == 0 {
-		return tx, errors.New("nodes not available")
+		return tx, common.GenericError{Msg: "nodes not available"}
 	}
 
 	randomNode := nodes[com.GetRandomInt(len(nodes)-1)]

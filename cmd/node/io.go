@@ -1,9 +1,9 @@
 package main
 
 import (
-	"errors"
 	"sync"
 
+	"github.com/antavelos/blockchain/pkg/common"
 	"github.com/antavelos/blockchain/pkg/db"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 	"github.com/antavelos/blockchain/pkg/models/wallet"
@@ -18,7 +18,7 @@ func ioAddTx(tx bc.Transaction) (bc.Transaction, error) {
 
 	blockchain, err := bdb.LoadBlockchain()
 	if err != nil {
-		return tx, errors.New("blockchain currently not available")
+		return tx, common.GenericError{Msg: "blockchain currently not available"}
 	}
 
 	tx, err = blockchain.AddTx(tx)
@@ -27,7 +27,7 @@ func ioAddTx(tx bc.Transaction) (bc.Transaction, error) {
 	}
 
 	if err := bdb.SaveBlockchain(*blockchain); err != nil {
-		return tx, errors.New("couldn't update blockchain")
+		return tx, common.GenericError{Msg: "couldn't update blockchain"}
 	}
 
 	return tx, nil
@@ -42,7 +42,7 @@ func ioAddBlock(block bc.Block) (bc.Block, error) {
 
 	blockchain, err := bdb.LoadBlockchain()
 	if err != nil {
-		return block, errors.New("blockchain currently not available")
+		return block, common.GenericError{Msg: "blockchain currently not available"}
 	}
 
 	err = blockchain.AddBlock(block)
@@ -51,7 +51,7 @@ func ioAddBlock(block bc.Block) (bc.Block, error) {
 	}
 
 	if err := bdb.SaveBlockchain(*blockchain); err != nil {
-		return block, errors.New("couldn't update blockchain")
+		return block, common.GenericError{Msg: "couldn't update blockchain"}
 	}
 
 	return block, nil
@@ -73,7 +73,7 @@ func ioGetWallet() (wallet.Wallet, error) {
 	}
 
 	if len(wallets) == 0 {
-		return wallet.Wallet{}, errors.New("no wallets available")
+		return wallet.Wallet{}, common.GenericError{Msg: "no wallets available"}
 	}
 
 	return wallets[0], nil

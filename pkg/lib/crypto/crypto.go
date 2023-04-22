@@ -2,8 +2,8 @@ package crypto
 
 import (
 	"crypto/ecdsa"
-	"errors"
 
+	"github.com/antavelos/blockchain/pkg/common"
 	eth "github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -31,7 +31,7 @@ func PublicKeyFromPrivateKey(privateKey *ecdsa.PrivateKey) (*ecdsa.PublicKey, er
 	publicKey := privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
-		return nil, errors.New("cannot assert type: publicKey is not of type *ecdsa.PublicKey")
+		return nil, common.GenericError{Msg: "cannot assert type: publicKey is not of type *ecdsa.PublicKey"}
 	}
 
 	return publicKeyECDSA, nil

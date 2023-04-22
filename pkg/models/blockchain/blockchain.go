@@ -4,16 +4,14 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/antavelos/blockchain/pkg/lib/crypto"
 	"github.com/antavelos/blockchain/pkg/common"
+	"github.com/antavelos/blockchain/pkg/lib/crypto"
 	"github.com/antavelos/blockchain/pkg/lib/rest"
 	"github.com/antavelos/blockchain/pkg/models/wallet"
 	"github.com/google/uuid"
@@ -102,12 +100,12 @@ func NewTransaction(senderWallet wallet.Wallet, recipientWallet wallet.Wallet, a
 
 	txbBytes, err := json.Marshal(txb)
 	if err != nil {
-		return Transaction{}, fmt.Errorf("failed to marshal transaction body: %v", err)
+		return Transaction{}, common.GenericError{Msg: "failed to marshal transaction body", Extra: err}
 	}
 
 	signature, err := senderWallet.Sign(crypto.HashData(txbBytes))
 	if err != nil {
-		return Transaction{}, fmt.Errorf("failed to sign transaction body: %v", err)
+		return Transaction{}, common.GenericError{Msg: "failed to sign transaction body", Extra: err}
 	}
 
 	return Transaction{
@@ -155,7 +153,7 @@ func (bc *Blockchain) RemoveTxs(txs []Transaction) {
 
 func (bc *Blockchain) AddBlock(block Block) error {
 	if err := bc.validateBlock(block); err != nil {
-		return fmt.Errorf("failed to validate block: %v", err.Error())
+		return common.GenericError{Msg: "failed to validate block"}
 	}
 
 	bc.Blocks = append(bc.Blocks, block)
@@ -203,7 +201,7 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 	txPoolLength := len(bc.TxPool)
 
 	if txPoolLength == 0 {
-		return Block{}, errors.New("no pending transactions found")
+		return Block{}, common.GenericError{Msg: "no pending transactions found"}
 	}
 
 	lastBlock := bc.Blocks[len(bc.Blocks)-1]
@@ -219,7 +217,7 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 
 	hashedLastBlock, err := hashBlock(lastBlock)
 	if err != nil {
-		return Block{}, errors.New("failed to hash last block")
+		return Block{}, common.GenericError{Msg: "failed to hash last block"}
 	}
 	newBlock := Block{
 		Idx:       lastBlock.Idx + 1,
@@ -268,13 +266,14 @@ func (bc *Blockchain) validateBlock(block Block) error {
 	difficulty := getMiningDifficulty()
 
 	if !blockSatisfiesHashRule(block) {
-		return fmt.Errorf("block does not start with %v '0'", difficulty)
+		msg := fmt.Sprintf("block does not start with %v '0'", difficulty)
+		return common.GenericError{Msg: msg}
 	}
 
 	lastBlockHashed, _ := hashBlock(bc.Blocks[len(bc.Blocks)-1])
 
 	if !bytes.Equal(block.PrevHash, lastBlockHashed) {
-		return errors.New("block.PrevHash does not match with last block's hash")
+		return common.GenericError{Msg: "block.PrevHash does not match with last block's hash"}
 	}
 
 	return nil
@@ -298,43 +297,43 @@ func (bc Blockchain) validateTransaction(tx Transaction) error {
 
 	txBodyBytes, err := json.Marshal(tx.Body)
 	if err != nil {
-		return errors.New("failed to marshal transaction body")
+		return common.GenericError{Msg: "failed to marshal transaction body"}
 	}
 
 	txBodyHash := crypto.HashData(txBodyBytes)
 
 	signatureBytes, err := hex.DecodeString(tx.Signature)
 	if err != nil {
-		return errors.New("failed to decode signature")
+		return common.GenericError{Msg: "failed to decode signature"}
 	}
 
 	publicKeyBytes, err := crypto.PublicKeyFromSignature(txBodyHash, signatureBytes)
 	if err != nil {
-		return errors.New("failed to retrieve public key from signature")
+		return common.GenericError{Msg: "failed to retrieve public key from signature"}
 	}
 
 	publicKey, err := crypto.UnmarshalPublicKey(publicKeyBytes)
 	if err != nil {
-		return errors.New("failed to unmarshal public key")
+		return common.GenericError{Msg: "failed to unmarshal public key"}
 	}
 
 	senderBytes, err := hex.DecodeString(tx.Body.Sender)
 	if err != nil {
-		return errors.New("failed to decode sender")
+		return common.GenericError{Msg: "failed to decode sender"}
 	}
 
 	senderAddress := crypto.AddressFromPublicKey(publicKey)
 	if !bytes.Equal(senderAddress, senderBytes) {
-		return errors.New("sender address does not match with the public key of the signature")
+		return common.GenericError{Msg: "sender address does not match with the public key of the signature"}
 	}
 
 	if !crypto.VerifySignature(txBodyHash, publicKeyBytes, signatureBytes) {
-		return errors.New("failed to verify signature")
+		return common.GenericError{Msg: "failed to verify signature"}
 	}
 
 	senderBalance := bc.getSenderBalance(tx.Body.Sender)
 	if tx.Body.Amount <= senderBalance {
-		return errors.New("sender has not sufficient funds")
+		return common.GenericError{Msg: "sender has not sufficient funds"}
 	}
 
 	return nil

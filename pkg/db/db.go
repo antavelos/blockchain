@@ -2,11 +2,10 @@ package db
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"os"
 	"sync"
 
+	"github.com/antavelos/blockchain/pkg/common"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 	nd "github.com/antavelos/blockchain/pkg/models/node"
 	w "github.com/antavelos/blockchain/pkg/models/wallet"
@@ -148,7 +147,7 @@ func (db *NodeDB) LoadNodes() ([]nd.Node, error) {
 func (db *NodeDB) AddNode(node nd.Node) error {
 	nodes, err := db.LoadNodes()
 	if err != nil {
-		return errors.New("nodes not available")
+		return common.GenericError{Msg: "nodes not available"}
 	}
 
 	if !containsNode(nodes, node) {
@@ -157,7 +156,7 @@ func (db *NodeDB) AddNode(node nd.Node) error {
 
 	err = db.SaveNodes(nodes)
 	if err != nil {
-		return errors.New("couldn't update nodes")
+		return common.GenericError{Msg: "couldn't update nodes"}
 	}
 
 	return nil
@@ -182,7 +181,7 @@ func (db *WalletDB) SaveWallet(wallet w.Wallet) error {
 
 	marshalled, err := json.MarshalIndent(wallets, "", "  ")
 	if err != nil {
-		return fmt.Errorf("failed to marshal wallets: %v", err.Error())
+		return common.GenericError{Msg: "failed to marshal wallets"}
 	}
 
 	return write(db.Filename, marshalled)
@@ -193,7 +192,7 @@ func (db *WalletDB) LoadWallets() ([]w.Wallet, error) {
 
 	file, err := read(db.Filename)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load wallets from file: %v", err.Error())
+		return nil, common.GenericError{Msg: "failed to load wallets from file"}
 	}
 
 	json.Unmarshal(file, &wallets)
@@ -205,12 +204,12 @@ func (db *WalletDB) CreateWallet() (*w.Wallet, error) {
 
 	wallet, err := w.NewWallet()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create a new wallet: %v", err.Error())
+		return nil, common.GenericError{Msg: "failed to create a new wallet"}
 	}
 
 	err = db.SaveWallet(*wallet)
 	if err != nil {
-		return nil, fmt.Errorf("failed to save new wallet: %v", err.Error())
+		return nil, common.GenericError{Msg: "failed to save new wallet"}
 	}
 
 	return wallet, nil

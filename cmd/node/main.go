@@ -2,10 +2,8 @@ package main
 
 import (
 	"encoding/hex"
-	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strings"
@@ -29,36 +27,37 @@ func getWalletsHost() string {
 	return fmt.Sprintf("http://%v:%v", os.Getenv("WALLETS_HOST"), os.Getenv("WALLETS_PORT"))
 }
 
-func getSelfHost() string {
-	return fmt.Sprintf("http://%v:%v", getSelfIP(), getSelfPort())
-}
-
 func getSelfPort() string {
 	return os.Getenv("PORT")
 }
 
-func getSelfIP() string {
+func getSelfIP() (string, error) {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		common.ErrorLogger.Printf("Cannot get IP: " + err.Error() + "\n")
+		return "", common.GenericError{Msg: "IP not found", Extra: err}
 	}
 
 	for _, a := range addrs {
 		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String()
+				return ipnet.IP.String(), nil
 			}
 		}
 	}
 
-	return ""
+	return "", common.GenericError{Msg: "IP not found"}
 }
 
-func getSelfNode() nd.Node {
-	return nd.Node{
-		IP:   getSelfIP(),
-		Port: getSelfPort(),
+func getSelfNode() (nd.Node, error) {
+	ip, err := getSelfIP()
+	if err != nil {
+		return nd.Node{}, err
 	}
+
+	return nd.Node{
+		IP:   ip,
+		Port: getSelfPort(),
+	}, nil
 }
 
 func main() {
@@ -71,7 +70,10 @@ func main() {
 		ioNewBlockchain()
 	}
 
-	initNode()
+	err := initNode()
+	if err != nil {
+		common.ErrorLogger.Fatalf(err.Error())
+	}
 
 	if *mine {
 		go runMiningLoop()
@@ -81,36 +83,57 @@ func main() {
 	router.Run(fmt.Sprintf(":%v", getSelfPort()))
 }
 
-func initNode() {
-	introduceToDns()
+type NodeError common.GenericError
 
-	retrieveDnsNodes()
+func initNode() error {
+	err := introduceToDns()
+	if err != nil {
+		return common.GenericError{Msg: "failed to introduce self at DNS", Extra: err}
+	}
 
-	pingNodes()
+	err = retrieveDnsNodes()
+	if err != nil {
+		return common.GenericError{Msg: "retrieve DNS nodes error", Extra: err}
+	}
+
+	// TODO: check if this step can be included in other calls
+	err = pingNodes()
+	if err != nil {
+		common.ErrorLogger.Printf("ping nodes error")
+	}
 
 	resolveLongestBlockchain()
 
-	getNewWallet()
+	if !hasWallet() {
+		err = createNewWallet()
+		return common.GenericError{Msg: "failed to create new wallet", Extra: err}
+	}
+
+	return nil
 }
 
 func introduceToDns() error {
-	return dns_client.AddDnsNode(getDnsHost(), getSelfNode())
+	selfNode, err := getSelfNode()
+	if err != nil {
+		return err
+	}
+
+	return dns_client.AddDnsNode(getDnsHost(), selfNode)
 }
 
 func retrieveDnsNodes() error {
-	ndb := db.GetNodeDb()
-
 	nodes, err := dns_client.GetDnsNodes(getDnsHost())
 	if err != nil {
-		return fmt.Errorf("Couldn't retrieve nodes from DNS %v", err.Error())
+		return common.GenericError{Msg: "couldn't retrieve nodes from DNS", Extra: err}
 	}
 
 	nodes = common.Filter(nodes, func(n nd.Node) bool {
 		return n.Port != getSelfPort()
 	})
 
+	ndb := db.GetNodeDb()
 	if err := ndb.SaveNodes(nodes); err != nil {
-		return errors.New("Couldn't save nodes received from DNS.")
+		return common.GenericError{Msg: "couldn't save nodes received from DNS"}
 	}
 
 	return nil
@@ -121,13 +144,20 @@ func pingNodes() error {
 
 	nodes, err := ndb.LoadNodes()
 	if err != nil {
-		return fmt.Errorf("Couldn't load nodes: %v", err.Error())
+		return common.GenericError{Msg: "couldn't load nodes", Extra: err}
 	}
 
-	responses := node_client.PingNodes(nodes, getSelfNode())
+	selfNode, err := getSelfNode()
+	if err != nil {
+		return err
+	}
+
+	responses := node_client.PingNodes(nodes, selfNode)
 
 	if responses.ErrorsRatio() < 1 {
-		return fmt.Errorf("Failed to ping all nodes: %v", strings.Join(responses.ErrorStrings(), "/n"))
+		return common.GenericError{
+			Msg: fmt.Sprintf("failed to share the transaction with other nodes\n %v", strings.Join(responses.ErrorStrings(), "\n")),
+		}
 	}
 
 	return nil
@@ -138,12 +168,12 @@ func runMiningLoop() {
 	for {
 		block, err := Mine()
 		if err != nil {
-			common.ErrorLogger.Printf("New block [FAIL]: %v", err.Error())
+			common.ErrorLogger.Printf("New block [FAIL]")
 
 			common.InfoLogger.Println("Resolving longest blockchain")
 			err := resolveLongestBlockchain()
 			if err != nil {
-				common.ErrorLogger.Printf("Failed to resolve longest blockchain: %v", err.Error())
+				common.ErrorLogger.Printf("Failed to resolve longest blockchain")
 			}
 
 		} else {
@@ -152,7 +182,7 @@ func runMiningLoop() {
 
 			err := reward()
 			if err != nil {
-				common.ErrorLogger.Printf("Failed to reward node: %v", err.Error())
+				common.ErrorLogger.Printf("Failed to reward node")
 			}
 
 		}
@@ -165,7 +195,7 @@ func runMiningLoop() {
 func reward() error {
 	wallet, err := ioGetWallet()
 	if err != nil {
-		return fmt.Errorf("node wallet not available: %v", err)
+		return common.GenericError{Msg: "node wallet not available", Extra: err}
 	}
 
 	tx := bc.Transaction{
@@ -178,18 +208,20 @@ func reward() error {
 
 	tx, err = ioAddTx(tx)
 	if err != nil {
-		return fmt.Errorf("failed to add reward transaction: %v", err.Error())
+		return common.GenericError{Msg: "failed to add reward transaction", Extra: err}
 	}
 
 	ndb := db.GetNodeDb()
 	nodes, err := ndb.LoadNodes()
 	if err != nil {
-		return fmt.Errorf("failed to load nodes: %v", err.Error())
+		return common.GenericError{Msg: "failed to load nodes", Extra: err}
 	}
 
 	responses := node_client.ShareTx(nodes, tx)
 	if responses.ErrorsRatio() > 0 {
-		return fmt.Errorf("failed to share the transaction with other nodes: \n%v", strings.Join(responses.ErrorStrings(), "\n"))
+		return common.GenericError{
+			Msg: fmt.Sprintf("failed to share the transaction with other nodes\n %v", strings.Join(responses.ErrorStrings(), "\n")),
+		}
 	}
 
 	return nil
@@ -197,7 +229,6 @@ func reward() error {
 
 func resolveLongestBlockchain() error {
 	ndb := db.GetNodeDb()
-	bdb := db.GetBlockchainDb()
 
 	nodes, err := ndb.LoadNodes()
 	if err != nil {
@@ -213,8 +244,9 @@ func resolveLongestBlockchain() error {
 		return response.Body.(*bc.Blockchain)
 	})
 
-	localBlockchain, _ := bdb.GetBlockchainDb()
-	blockchains := append(blockchains, localBlockchain)
+	bdb := db.GetBlockchainDb()
+	localBlockchain, _ := bdb.LoadBlockchain()
+	blockchains = append(blockchains, localBlockchain)
 
 	maxLengthBlockchain := bc.GetMaxLengthBlockchain(blockchains)
 
@@ -224,33 +256,26 @@ func resolveLongestBlockchain() error {
 
 	err = bdb.UpdateBlockchain(maxLengthBlockchain)
 	if err != nil {
-		return fmt.Errorf("failed to update local blockchain: %v", err.Error())
+		return common.GenericError{Msg: "failed to update local blockchain", Extra: err}
 	}
 
 	return nil
 }
 
-func getMaxLengthBlockchain(blockchains []*bc.Blockchain) *bc.Blockchain {
-	bdb := db.GetBlockchainDb()
+func hasWallet() bool {
+	wdb := db.GetWalletDb()
 
-	maxLengthBlockchain, _ := bdb.LoadBlockchain()
+	wallets, _ := wdb.LoadWallets()
 
-	for _, blockchain := range blockchains {
-		if maxLengthBlockchain == nil || len(blockchain.Blocks) > len(maxLengthBlockchain.Blocks) {
-			maxLengthBlockchain = blockchain
-		}
-	}
-
-	return maxLengthBlockchain
+	return len(wallets) > 0
 }
 
-func getNewWallet() error {
+func createNewWallet() error {
 	wallet, err := wallet_client.GetNewWallet(getWalletsHost())
 	if err != nil {
 		return err
 	}
 
 	wdb := db.GetWalletDb()
-
 	return wdb.SaveWallet(wallet)
 }

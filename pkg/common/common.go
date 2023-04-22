@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -9,6 +10,20 @@ import (
 
 var InfoLogger *log.Logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 var ErrorLogger *log.Logger = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+
+type GenericError struct {
+	Msg   string
+	Extra error
+}
+
+func (e GenericError) Error() string {
+	msg := e.Msg
+	if e.Extra != nil {
+		msg = fmt.Sprintf("%v: %v", e.Msg, e.Extra.Error())
+	}
+	ErrorLogger.Println(msg)
+	return msg
+}
 
 func Map[T, R any](data []T, f func(T) R) []R {
 

@@ -3,8 +3,6 @@ package rest
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"sync"
@@ -25,7 +23,7 @@ func GetHttpData(url string) ([]byte, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(string(body))
+		return nil, common.GenericError{Msg: string(body)}
 	}
 
 	return body, err
@@ -44,7 +42,7 @@ func PostHttpData(url string, data []byte) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(string(body))
+		return nil, common.GenericError{Msg: string(body)}
 	}
 
 	return body, nil
@@ -99,7 +97,7 @@ func (r PostRequester) Request() Response {
 
 	responseBody, err := PostHttpData(r.URL, dataBytes)
 	if err != nil {
-		return Response{Err: fmt.Errorf("%v: %v", r.URL, err.Error())}
+		return Response{Err: common.GenericError{Msg: r.URL, Extra: err}}
 	}
 
 	if r.M == nil {
@@ -108,7 +106,7 @@ func (r PostRequester) Request() Response {
 
 	unmarshalledBody, err := r.M.Unmarshal(responseBody)
 	if err != nil {
-		return Response{Err: fmt.Errorf("%v: failed to unmarshal response: %v", r.URL, err.Error())}
+		return Response{Err: common.GenericError{Msg: "failed to unmarshal response", Extra: err}}
 	}
 
 	return Response{Body: unmarshalledBody}
@@ -122,7 +120,7 @@ type GetRequester struct {
 func (r GetRequester) Request() Response {
 	responseBody, err := GetHttpData(r.URL)
 	if err != nil {
-		return Response{Err: fmt.Errorf("%v: %v", r.URL, err.Error())}
+		return Response{Err: common.GenericError{Msg: r.URL, Extra: err}}
 	}
 
 	if r.M == nil {
@@ -131,7 +129,7 @@ func (r GetRequester) Request() Response {
 
 	unmarshalledBody, err := r.M.Unmarshal(responseBody)
 	if err != nil {
-		return Response{Err: fmt.Errorf("%v: failed to unmarshal response: %v", r.URL, err.Error())}
+		return Response{Err: common.GenericError{Msg: r.URL, Extra: err}}
 	}
 
 	return Response{Body: unmarshalledBody}

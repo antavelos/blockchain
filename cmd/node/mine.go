@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -16,16 +15,16 @@ func shareBlock(block bc.Block) error {
 
 	nodes, err := ndb.LoadNodes()
 	if err != nil {
-		return fmt.Errorf("failed to share new block: %v", err.Error())
+		return common.GenericError{Msg: "failed to share new block"}
 	}
 
 	responses := node_client.ShareBlock(nodes, block)
 	if responses.ErrorsRatio() > 0 {
-		errorStrings := strings.Join(responses.ErrorStrings(), "\n")
-		common.ErrorLogger.Printf("new block was not accepted by some nodes: \n%v", errorStrings)
+		msg := fmt.Sprintf("new block was not accepted by some nodes: \n%v", strings.Join(responses.ErrorStrings(), "\n"))
+		common.ErrorLogger.Printf(msg)
 
 		if responses.ErrorsRatio() > 0.5 {
-			return fmt.Errorf("new block was rejected by other nodes: \n%v", errorStrings)
+			return common.GenericError{Msg: msg}
 		}
 	}
 
@@ -38,7 +37,7 @@ func Mine() (bc.Block, error) {
 	blockchain, err := bdb.LoadBlockchain()
 
 	if err != nil {
-		return bc.Block{}, errors.New("blockchain currently not available")
+		return bc.Block{}, common.GenericError{Msg: "blockchain currently not available"}
 	}
 
 	block, err := blockchain.NewBlock()
@@ -58,7 +57,7 @@ func Mine() (bc.Block, error) {
 
 	err = bdb.SaveBlockchain(*blockchain)
 	if err != nil {
-		return bc.Block{}, errors.New("failed to update blockchain")
+		return bc.Block{}, common.GenericError{Msg: "failed to update blockchain"}
 	}
 
 	return block, nil
