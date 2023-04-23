@@ -22,7 +22,7 @@ func GetHttpData(url string) ([]byte, error) {
 		return nil, err
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return nil, common.GenericError{Msg: string(body)}
 	}
 
@@ -40,7 +40,6 @@ func PostHttpData(url string, data []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		return nil, common.GenericError{Msg: string(body)}
 	}
@@ -57,7 +56,7 @@ type ObjectMarshaller struct {
 }
 
 type Response struct {
-	Body any
+	Body []byte
 	Err  error
 }
 
@@ -74,7 +73,7 @@ func (br BulkResponse) ErrorsRatio() float64 {
 }
 
 func (br BulkResponse) ErrorStrings() []string {
-	return common.Map(br, func(r Response) string {
+	return common.Map(br.errorResponses(), func(r Response) string {
 		return r.Err.Error()
 	})
 }
@@ -97,19 +96,11 @@ func (r PostRequester) Request() Response {
 
 	responseBody, err := PostHttpData(r.URL, dataBytes)
 	if err != nil {
+
 		return Response{Err: common.GenericError{Msg: r.URL, Extra: err}}
 	}
 
-	if r.M == nil {
-		return Response{Body: responseBody}
-	}
-
-	unmarshalledBody, err := r.M.Unmarshal(responseBody)
-	if err != nil {
-		return Response{Err: common.GenericError{Msg: "failed to unmarshal response", Extra: err}}
-	}
-
-	return Response{Body: unmarshalledBody}
+	return Response{Body: responseBody}
 }
 
 type GetRequester struct {
@@ -123,16 +114,7 @@ func (r GetRequester) Request() Response {
 		return Response{Err: common.GenericError{Msg: r.URL, Extra: err}}
 	}
 
-	if r.M == nil {
-		return Response{Body: responseBody}
-	}
-
-	unmarshalledBody, err := r.M.Unmarshal(responseBody)
-	if err != nil {
-		return Response{Err: common.GenericError{Msg: r.URL, Extra: err}}
-	}
-
-	return Response{Body: unmarshalledBody}
+	return Response{Body: responseBody}
 }
 
 func BulkRequest(requesters []Requester) BulkResponse {

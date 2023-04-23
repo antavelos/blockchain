@@ -204,7 +204,7 @@ func (db *WalletDB) CreateWallet() (*w.Wallet, error) {
 
 	wallet, err := w.NewWallet()
 	if err != nil {
-		return nil, common.GenericError{Msg: "failed to create a new wallet"}
+		return nil, common.GenericError{Msg: "failed to create a new wallet", Extra: err}
 	}
 
 	err = db.SaveWallet(*wallet)

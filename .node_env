@@ -6,4 +6,4 @@ MINING_DIFFICULTY=2
 TXS_PER_BLOCK=10
 BLOCKCHAIN_FILENAME=/data/blockchain.json
 NODES_FILENAME=/data/nodes.json
-WALLET_FILENAME=/data/wallet.json
+WALLETS_FILENAME=/data/wallet.json

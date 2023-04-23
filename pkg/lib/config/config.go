@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"fmt"
@@ -19,16 +19,8 @@ func getEnvVar(conf Config, envVar string) error {
 	return nil
 }
 
-func getConfig() (Config, error) {
+func LoadConfig(envVars []string) (Config, error) {
 	conf := make(Config)
-
-	envVars := []string{
-		"PORT",
-		"DNS_HOST",
-		"DNS_PORT",
-		"WALLETS_HOST",
-		"WALLETS_PORT",
-	}
 
 	for _, envVar := range envVars {
 		err := getEnvVar(conf, envVar)

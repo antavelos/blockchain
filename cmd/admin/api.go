@@ -40,7 +40,12 @@ func getNodeBlockchains(nodes []nd.Node) []*bc.Blockchain {
 			return &bc.Blockchain{}
 		}
 
-		return response.Body.(*bc.Blockchain)
+		blockchain, err := bc.UnmarshalBlockchain(response.Body)
+		if err != nil {
+			return &bc.Blockchain{}
+		}
+
+		return &blockchain
 	})
 }
 

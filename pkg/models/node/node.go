@@ -3,33 +3,34 @@ package node
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/antavelos/blockchain/pkg/lib/rest"
 )
 
 type Node struct {
 	Name   string `json:"name"`
-	Schema string `json:"schema" default:"http"`
+	Schema string `json:"schema"`
 	IP     string `json:"ip"`
 	Port   string `json:"port"`
+}
+
+func NewNode(name string, ip string, port string) Node {
+	return Node{
+		Name:   name,
+		Schema: "http",
+		IP:     ip,
+		Port:   port,
+	}
 }
 
 func (n Node) GetHost() string {
 	return fmt.Sprintf("%v://%v:%v", n.Schema, n.IP, n.Port)
 }
 
-type NodeMarshaller rest.ObjectMarshaller
+func Unmarshal(data []byte) (node Node, err error) {
+	err = json.Unmarshal(data, &node)
+	return
+}
 
-// TODO: make this generic
-func (nm NodeMarshaller) Unmarshal(data []byte) (any, error) {
-	var target any
-	if nm.Many {
-		target = make([]Node, 0)
-	} else {
-		target = Node{}
-	}
-
-	err := json.Unmarshal(data, &target)
-
-	return target, err
+func UnmarshalMany(data []byte) (nodes []Node, err error) {
+	err = json.Unmarshal(data, &nodes)
+	return
 }

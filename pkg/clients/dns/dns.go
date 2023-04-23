@@ -10,19 +10,21 @@ const nodesEndpoint = "/nodes"
 func GetDnsNodes(host string) ([]nd.Node, error) {
 	requester := rest.GetRequester{
 		URL: host + nodesEndpoint,
-		M:   nd.NodeMarshaller{Many: true},
 	}
 
 	response := requester.Request()
 
-	return response.Body.([]nd.Node), response.Err
+	if response.Err != nil {
+		return nil, response.Err
+	}
+
+	return nd.UnmarshalMany(response.Body)
 }
 
 func AddDnsNode(host string, node nd.Node) error {
 	requester := rest.PostRequester{
 		URL:  host + nodesEndpoint,
 		Body: node,
-		M:    nd.NodeMarshaller{Many: true},
 	}
 
 	response := requester.Request()

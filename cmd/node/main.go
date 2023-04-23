@@ -14,12 +14,21 @@ import (
 	"github.com/antavelos/blockchain/pkg/common"
 	"github.com/antavelos/blockchain/pkg/db"
 	"github.com/antavelos/blockchain/pkg/lib/bus"
+	cfg "github.com/antavelos/blockchain/pkg/lib/config"
 	"github.com/antavelos/blockchain/pkg/lib/rest"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 	nd "github.com/antavelos/blockchain/pkg/models/node"
 )
 
-var config Config
+var config cfg.Config
+
+var envVars []string = []string{
+	"PORT",
+	"DNS_HOST",
+	"DNS_PORT",
+	"WALLETS_HOST",
+	"WALLETS_PORT",
+}
 
 func main() {
 	mine := flag.Bool("mine", false, "Indicates whether it will run as miner")
@@ -28,7 +37,8 @@ func main() {
 	flag.Parse()
 
 	var err error
-	config, err = getConfig()
+
+	config, err = cfg.LoadConfig(envVars)
 	if err != nil {
 		common.LogFatal("Configuration error", err.Error())
 	}
@@ -47,6 +57,8 @@ func main() {
 	}
 
 	go startEventLoop()
+
+	// TODO: add a periodic longest blockchain resolve
 
 	router := InitRouter()
 	router.Run(fmt.Sprintf(":%v", config["PORT"]))
@@ -86,10 +98,7 @@ func getSelfNode() (nd.Node, error) {
 		return nd.Node{}, err
 	}
 
-	return nd.Node{
-		IP:   ip,
-		Port: config["PORT"],
-	}, nil
+	return nd.NewNode("", ip, config["PORT"]), nil
 }
 
 func initNode() error {
@@ -106,14 +115,15 @@ func initNode() error {
 	// TODO: check if this step can be included in other calls
 	err = pingNodes()
 	if err != nil {
-		common.LogError("ping nodes error")
+		common.LogError("ping nodes error", err.Error())
 	}
 
 	resolveLongestBlockchain()
 
 	if !hasWallet() {
-		err = createNewWallet()
-		return common.GenericError{Msg: "failed to create new wallet", Extra: err}
+		if err := createNewWallet(); err != nil {
+			return common.GenericError{Msg: "failed to create new wallet", Extra: err}
+		}
 	}
 
 	return nil
@@ -175,16 +185,16 @@ func runMiningLoop() {
 	for {
 		block, err := Mine()
 		if err != nil {
-			common.LogError("New block [FAIL]")
+			common.LogError("New block [FAIL]", err.Error())
 
 			common.LogInfo("Resolving longest blockchain")
 			err := resolveLongestBlockchain()
 			if err != nil {
-				common.LogError("Failed to resolve longest blockchain")
+				common.LogError("Failed to resolve longest blockchain", err.Error())
 			}
 
 		} else {
-			common.LogInfo("New block [OK]: %v", block.Idx)
+			common.LogInfo("New block [OK]", block.Idx)
 
 			// TODO: check who should do the reward
 			//
@@ -232,7 +242,12 @@ func resolveLongestBlockchain() error {
 			return &bc.Blockchain{}
 		}
 
-		return response.Body.(*bc.Blockchain)
+		blockchain, err := bc.UnmarshalBlockchain(response.Body)
+		if err != nil {
+			return &bc.Blockchain{}
+		}
+
+		return &blockchain
 	})
 
 	bdb := db.GetBlockchainDb()

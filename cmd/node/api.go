@@ -22,7 +22,7 @@ func addSharedBlock(c *gin.Context) {
 	var block bc.Block
 
 	if err := c.BindJSON(&block); err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "invalid input"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 
@@ -39,7 +39,7 @@ func addSharedTx(c *gin.Context) {
 	var tx bc.Transaction
 
 	if err := c.BindJSON(&tx); err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "invalid input"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 
@@ -56,12 +56,12 @@ func addTx(c *gin.Context) {
 
 	var tx bc.Transaction
 	if err := c.BindJSON(&tx); err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "invalid input"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 
 	if tx.Body.Sender == "" || tx.Body.Recipient == "" || tx.Body.Amount == 0.0 {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "invalid input"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 
@@ -96,7 +96,7 @@ func ping(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
-	common.LogInfo("Ping from %#v", node.GetHost())
+	common.LogInfo("Ping from", node.GetHost())
 
 	err := ndb.AddNode(node)
 	if err != nil {

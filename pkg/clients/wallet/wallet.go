@@ -10,10 +10,13 @@ const newWalletEndpoint = "/wallets/new"
 func GetNewWallet(host string) (wallet.Wallet, error) {
 	requester := rest.GetRequester{
 		URL: host + newWalletEndpoint,
-		M:   wallet.WalletMarshaller{},
 	}
 
 	response := requester.Request()
 
-	return response.Body.(wallet.Wallet), response.Err
+	if response.Err != nil {
+		return wallet.Wallet{}, response.Err
+	}
+
+	return wallet.Unmarshal(response.Body)
 }

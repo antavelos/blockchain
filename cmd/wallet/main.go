@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"os"
 	"strconv"
 	"time"
 
@@ -13,16 +12,30 @@ import (
 	node_client "github.com/antavelos/blockchain/pkg/clients/node"
 	"github.com/antavelos/blockchain/pkg/common"
 	"github.com/antavelos/blockchain/pkg/db"
+	cfg "github.com/antavelos/blockchain/pkg/lib/config"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 	w "github.com/antavelos/blockchain/pkg/models/wallet"
 )
 
-var port string = os.Getenv("PORT")
+var config cfg.Config
+var envVars []string = []string{
+	"PORT",
+	"WALLET_CREATION_INTERVAL_IN_SEC",
+	"TRANSACTION_CREATION_INTERVAL_IN_SEC",
+	"DNS_HOST",
+	"DNS_PORT",
+}
 
 func main() {
 	simulate := flag.Bool("simulate", false, "simulates new wallets' and transactions'")
 
 	flag.Parse()
+
+	var err error
+	config, err = cfg.LoadConfig(envVars)
+	if err != nil {
+		common.LogFatal("Configuration error", err.Error())
+	}
 
 	if *simulate {
 		go runSimulation()
@@ -33,13 +46,13 @@ func main() {
 
 func runServer() {
 	router := InitRouter()
-	router.Run(fmt.Sprintf(":%v", port))
+	router.Run(fmt.Sprintf(":%v", config["PORT"]))
 }
 
 func runSimulation() {
 	wdb := db.GetWalletDb()
-	walletCreationIntervalInSec, _ := strconv.Atoi(os.Getenv("WALLET_CREATION_INTERVAL_IN_SEC"))
-	txCreationIntervalInSec, _ := strconv.Atoi(os.Getenv("TRANSACTION_CREATION_INTERVAL_IN_SEC"))
+	walletCreationIntervalInSec, _ := strconv.Atoi(config["WALLET_CREATION_INTERVAL_IN_SEC"])
+	txCreationIntervalInSec, _ := strconv.Atoi(config["TRANSACTION_CREATION_INTERVAL_IN_SEC"])
 
 	i := 0
 	for {
@@ -48,7 +61,7 @@ func runSimulation() {
 			if err != nil {
 				common.LogError("New wallet [FAIL]", err.Error())
 			} else {
-				common.LogInfo("New wallet [OK]: %v", hex.EncodeToString(w.Address))
+				common.LogInfo("New wallet [OK]", hex.EncodeToString(w.Address))
 			}
 		}
 
@@ -59,10 +72,11 @@ func runSimulation() {
 			}
 
 			tx, err = sendTransaction(tx)
+			msg := fmt.Sprintf("Transaction from %v to %v", tx.Body.Sender, tx.Body.Recipient)
 			if err != nil {
-				common.LogError("Transaction from %v to %v [FAIL]: %v", tx.Body.Sender, tx.Body.Recipient, err.Error())
+				common.LogError(msg, "[FAIL]", err.Error())
 			} else {
-				common.LogInfo("Transaction from %v to %v [OK]: %v", tx.Body.Sender, tx.Body.Recipient, tx.Id)
+				common.LogError(msg, "[OK]", tx.Id)
 			}
 		}
 
@@ -111,7 +125,7 @@ func createTransaction() (bc.Transaction, error) {
 }
 
 func getDnsHost() string {
-	return fmt.Sprintf("http://%v:%v", os.Getenv("DNS_HOST"), os.Getenv("DNS_PORT"))
+	return fmt.Sprintf("http://%v:%v", config["DNS_HOST"], config["DNS_PORT"])
 }
 
 func sendTransaction(tx bc.Transaction) (bc.Transaction, error) {
@@ -128,10 +142,5 @@ func sendTransaction(tx bc.Transaction) (bc.Transaction, error) {
 
 	randomNode := nodes[common.GetRandomInt(len(nodes)-1)]
 
-	response := node_client.SendTransaction(randomNode, tx)
-	if response.Err != nil {
-		return bc.Transaction{}, response.Err
-	}
-
-	return response.Body.(bc.Transaction), nil
+	return node_client.SendTransaction(randomNode, tx)
 }

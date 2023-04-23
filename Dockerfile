@@ -5,7 +5,7 @@ RUN mkdir /data
 
 WORKDIR /app
 
-COPY src /app
+COPY . /app
 
 RUN cd /app
 RUN go build -o ./cmd/node/node ./cmd/node/

@@ -12,7 +12,6 @@ import (
 
 	"github.com/antavelos/blockchain/pkg/common"
 	"github.com/antavelos/blockchain/pkg/lib/crypto"
-	"github.com/antavelos/blockchain/pkg/lib/rest"
 	"github.com/antavelos/blockchain/pkg/models/wallet"
 	"github.com/google/uuid"
 )
@@ -60,34 +59,24 @@ type Blockchain struct {
 	TxPool []Transaction `json:"txPool"`
 }
 
-type TxMarshaller rest.ObjectMarshaller
-
-func (tm TxMarshaller) Unmarshal(data []byte) (any, error) {
-	var target any
-	if tm.Many {
-		target = make([]Transaction, 0)
-	} else {
-		target = Transaction{}
-	}
-
-	err := json.Unmarshal(data, &target)
-
-	return target, err
+func UnmarshalBlockchain(data []byte) (blockchain Blockchain, err error) {
+	err = json.Unmarshal(data, &blockchain)
+	return
 }
 
-type BlockchainMarshaller rest.ObjectMarshaller
+func UnmarshalBlockchainMany(data []byte) (blockchains []Blockchain, err error) {
+	err = json.Unmarshal(data, &blockchains)
+	return
+}
 
-func (bm BlockchainMarshaller) Unmarshal(data []byte) (any, error) {
-	var target any
-	if bm.Many {
-		target = make([]Blockchain, 0)
-	} else {
-		target = Blockchain{}
-	}
+func UnmarshalTransaction(data []byte) (tx Transaction, err error) {
+	err = json.Unmarshal(data, &tx)
+	return
+}
 
-	err := json.Unmarshal(data, &target)
-
-	return target, err
+func UnmarshalTransactionMany(data []byte) (txs []Transaction, err error) {
+	err = json.Unmarshal(data, &txs)
+	return
 }
 
 func NewTransaction(senderWallet wallet.Wallet, recipientWallet wallet.Wallet, amount float64) (Transaction, error) {
@@ -153,7 +142,7 @@ func (bc *Blockchain) RemoveTxs(txs []Transaction) {
 
 func (bc *Blockchain) AddBlock(block Block) error {
 	if err := bc.validateBlock(block); err != nil {
-		return common.GenericError{Msg: "failed to validate block"}
+		return common.GenericError{Msg: "block is not valid", Extra: err}
 	}
 
 	bc.Blocks = append(bc.Blocks, block)
@@ -217,7 +206,7 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 
 	hashedLastBlock, err := hashBlock(lastBlock)
 	if err != nil {
-		return Block{}, common.GenericError{Msg: "failed to hash last block"}
+		return Block{}, common.GenericError{Msg: "failed to hash last block", Extra: err}
 	}
 	newBlock := Block{
 		Idx:       lastBlock.Idx + 1,
@@ -231,7 +220,7 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 	for !blockSatisfiesHashRule(newBlock) {
 		newBlock.Nonce += 1
 	}
-	common.LogInfo("Found Nonce: %v", newBlock.Nonce)
+	common.LogInfo("Found Nonce", newBlock.Nonce)
 
 	return newBlock, nil
 }

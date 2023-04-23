@@ -9,7 +9,7 @@ import (
 const sharedTransactionsEndpoint = "/shared-transactions"
 const sharedBlocksEndpoint = "/shared-blocks"
 const pingEndpoint = "/ping"
-const blockchainEndpoint = "/blockachain"
+const blockchainEndpoint = "/blockchain"
 const transactionsEndpoint = "/transactions"
 
 func ShareTx(nodes []nd.Node, tx bc.Transaction) rest.BulkResponse {
@@ -44,7 +44,6 @@ func PingNodes(nodes []nd.Node, selfNode nd.Node) rest.BulkResponse {
 		requester := rest.PostRequester{
 			URL:  node.GetHost() + pingEndpoint,
 			Body: selfNode,
-			M:    nd.NodeMarshaller{Many: true},
 		}
 		requesters = append(requesters, requester)
 	}
@@ -57,7 +56,6 @@ func GetBlockchains(nodes []nd.Node) rest.BulkResponse {
 	for _, node := range nodes {
 		requester := rest.GetRequester{
 			URL: node.GetHost() + blockchainEndpoint,
-			M:   bc.BlockchainMarshaller{Many: true},
 		}
 		requesters = append(requesters, requester)
 	}
@@ -65,11 +63,16 @@ func GetBlockchains(nodes []nd.Node) rest.BulkResponse {
 	return rest.BulkRequest(requesters)
 }
 
-func SendTransaction(node nd.Node, tx bc.Transaction) rest.Response {
+func SendTransaction(node nd.Node, tx bc.Transaction) (bc.Transaction, error) {
 	requester := rest.PostRequester{
-		URL: node.GetHost() + transactionsEndpoint,
-		M:   bc.TxMarshaller{},
+		URL:  node.GetHost() + transactionsEndpoint,
+		Body: tx,
 	}
 
-	return requester.Request()
+	response := requester.Request()
+	if response.Err != nil {
+		return bc.Transaction{}, response.Err
+	}
+
+	return bc.UnmarshalTransaction(response.Body)
 }

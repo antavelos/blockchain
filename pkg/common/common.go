@@ -14,7 +14,7 @@ var fatalLogger *log.Logger = log.New(os.Stdout, "FATAL: ", log.Ldate|log.Ltime|
 
 func logMessage(logger *log.Logger, v ...any) {
 	if len(v) == 1 {
-		logger.Panicln(v...)
+		logger.Println(v...)
 	} else {
 		lastIdx := len(v) - 1
 		allButLast := Map(v[:lastIdx], func(i any) any {
@@ -46,7 +46,6 @@ func (e GenericError) Error() string {
 	if e.Extra != nil {
 		msg = fmt.Sprintf("%v: %v", e.Msg, e.Extra.Error())
 	}
-	// LogError(msg)
 	return msg
 }
 
