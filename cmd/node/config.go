@@ -12,7 +12,7 @@ type Config map[string]string
 func getEnvVar(conf Config, envVar string) error {
 	value, found := os.LookupEnv(envVar)
 	if !found {
-		return common.GenericError{Msg: fmt.Sprintf("env variable '%v' not set", value)}
+		return common.GenericError{Msg: fmt.Sprintf("env variable '%v' not set", envVar)}
 	}
 	conf[envVar] = value
 

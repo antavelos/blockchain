@@ -12,24 +12,27 @@ var infoLogger *log.Logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|lo
 var errorLogger *log.Logger = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
 var fatalLogger *log.Logger = log.New(os.Stdout, "FATAL: ", log.Ldate|log.Ltime|log.Lshortfile)
 
-func logMessage(logger *log.Logger, msg string, v ...any) {
-	if len(v) == 0 {
-		logger.Println(msg)
+func logMessage(logger *log.Logger, v ...any) {
+	if len(v) == 1 {
+		logger.Panicln(v...)
 	} else {
-		msg = msg + ": "
-		logger.Printf(msg, v...)
+		lastIdx := len(v) - 1
+		allButLast := Map(v[:lastIdx], func(i any) any {
+			return i.(string) + ": "
+		})
+		logger.Println(append(allButLast, v[lastIdx])...)
 	}
 }
-func LogInfo(msg string, v ...any) {
-	logMessage(infoLogger, msg, v...)
+func LogInfo(v ...any) {
+	logMessage(infoLogger, v...)
 }
 
-func LogError(msg string, v ...any) {
-	logMessage(errorLogger, msg, v...)
+func LogError(v ...any) {
+	logMessage(errorLogger, v...)
 }
 
-func LogFatal(msg string, v ...any) {
-	logMessage(fatalLogger, msg, v...)
+func LogFatal(v ...any) {
+	logMessage(fatalLogger, v...)
 	fatalLogger.Fatal()
 }
 
@@ -43,7 +46,7 @@ func (e GenericError) Error() string {
 	if e.Extra != nil {
 		msg = fmt.Sprintf("%v: %v", e.Msg, e.Extra.Error())
 	}
-	LogError(msg)
+	// LogError(msg)
 	return msg
 }
 
