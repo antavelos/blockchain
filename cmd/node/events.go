@@ -11,8 +11,10 @@ import (
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 )
 
-const shareTxTopic = "SHARE_TRANSACTION"
-const rewardTopic = "REWARD_TRANSACTION"
+const (
+	ShareTransaction bus.Topic = iota
+	RewardTransaction
+)
 
 func shareTxHandler(event bus.DataEvent) {
 	tx := event.Data.(bc.Transaction)
@@ -21,12 +23,20 @@ func shareTxHandler(event bus.DataEvent) {
 	nodes, _ := ndb.LoadNodes()
 	responses := node_client.ShareTx(nodes, tx)
 	if responses.ErrorsRatio() > 0 {
-		common.LogError("Failed to share the transaction with some nodes: \n%v", responses.ErrorStrings())
+		common.LogError("Failed to share the transaction with some nodes", responses.ErrorStrings())
 	}
 }
 
-func rewardHandler(event bus.DataEvent) error {
+func rewardTxHandler(event bus.DataEvent) {
 	tx := event.Data.(bc.Transaction)
+
+	err := reward(tx)
+	if err != nil {
+		common.LogError(err.Error())
+	}
+}
+
+func reward(tx bc.Transaction) error {
 
 	tx, err := ioAddTx(tx)
 	if err != nil {
@@ -50,15 +60,15 @@ func rewardHandler(event bus.DataEvent) error {
 }
 
 func startEventLoop() {
-	shareTxChan := bus.Subscribe(shareTxTopic)
-	rewardChan := bus.Subscribe(rewardTopic)
+	shareTxChan := bus.Subscribe(ShareTransaction)
+	rewardChan := bus.Subscribe(RewardTransaction)
 
 	for {
 		select {
 		case shareTx := <-*shareTxChan:
 			go shareTxHandler(shareTx)
 		case rewardTx := <-*rewardChan:
-			go rewardHandler(rewardTx)
+			go rewardTxHandler(rewardTx)
 		}
 	}
 

@@ -209,7 +209,7 @@ func rewardSelf() error {
 		},
 	}
 
-	bus.Publish(rewardTopic, rewardTx)
+	bus.Publish(RewardTransaction, rewardTx)
 
 	return nil
 }

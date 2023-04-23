@@ -4,8 +4,10 @@ import (
 	"sync"
 )
 
+type Topic int64
+
 type DataEvent struct {
-	Topic string
+	topic Topic
 	Data  any
 }
 
@@ -14,15 +16,15 @@ type DataChannel chan DataEvent
 type DataChannels []DataChannel
 
 type EventBus struct {
-	subscribers map[string]DataChannels
+	subscribers map[Topic]DataChannels
 	mx          sync.RWMutex
 }
 
 var _eb = &EventBus{
-	subscribers: map[string]DataChannels{},
+	subscribers: map[Topic]DataChannels{},
 }
 
-func Publish(topic string, data any) {
+func Publish(topic Topic, data any) {
 	_eb.mx.RLock()
 	if chans, found := _eb.subscribers[topic]; found {
 		channels := append(DataChannels{}, chans...)
@@ -31,12 +33,12 @@ func Publish(topic string, data any) {
 			for _, ch := range dataChannelSlices {
 				ch <- data
 			}
-		}(DataEvent{Data: data, Topic: topic}, channels)
+		}(DataEvent{Data: data, topic: topic}, channels)
 	}
 	_eb.mx.RUnlock()
 }
 
-func Subscribe(topic string) *DataChannel {
+func Subscribe(topic Topic) *DataChannel {
 	ch := make(DataChannel)
 
 	_eb.mx.Lock()

@@ -71,15 +71,7 @@ func addTx(c *gin.Context) {
 		return
 	}
 
-	bus.Publish(shareTxTopic, tx)
-	// TODO: publish event
-
-	// if nodeErrors := ShareTx(tx); nodeErrors != nil {
-	// 	errorStrings := ErrorsToStrings(nodeErrors)
-	// 	if len(errorStrings) > 0 {
-	// 		LogError("Failed to share the transaction with other nodes: \n%v", strings.Join(errorStrings, "\n"))
-	// 	}
-	// }
+	bus.Publish(ShareTransaction, tx)
 
 	c.IndentedJSON(http.StatusCreated, tx)
 }
