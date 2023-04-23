@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 	"time"
 
@@ -20,16 +19,48 @@ import (
 	nd "github.com/antavelos/blockchain/pkg/models/node"
 )
 
+var config Config
+
+func main() {
+	mine := flag.Bool("mine", false, "Indicates whether it will run as miner")
+	init := flag.Bool("init", false, "Initialises the blockchain. Existing blockchain will be overriden. Overrules other options.")
+
+	flag.Parse()
+
+	var err error
+	config, err = getConfig()
+	if err != nil {
+		common.LogFatal("Configuration error", err.Error())
+	}
+
+	if *init {
+		ioNewBlockchain()
+	}
+
+	err = initNode()
+	if err != nil {
+		common.LogFatal(err.Error())
+	}
+
+	if *mine {
+		go runMiningLoop()
+	}
+
+	go startEventLoop()
+
+	router := InitRouter()
+	router.Run(fmt.Sprintf(":%v", config["PORT"]))
+}
+
+func getUrl(host string, port string) string {
+	return fmt.Sprintf("http://%v:%v", host, port)
+}
 func getDnsHost() string {
-	return fmt.Sprintf("http://%v:%v", os.Getenv("DNS_HOST"), os.Getenv("DNS_PORT"))
+	return getUrl(config["DNS_HOST"], config["DNS_PORT"])
 }
 
 func getWalletsHost() string {
-	return fmt.Sprintf("http://%v:%v", os.Getenv("WALLETS_HOST"), os.Getenv("WALLETS_PORT"))
-}
-
-func getSelfPort() string {
-	return os.Getenv("PORT")
+	return getUrl(config["WALLETS_HOST"], config["WALLETS_PORT"])
 }
 
 func getSelfIP() (string, error) {
@@ -57,36 +88,9 @@ func getSelfNode() (nd.Node, error) {
 
 	return nd.Node{
 		IP:   ip,
-		Port: getSelfPort(),
+		Port: config["PORT"],
 	}, nil
 }
-
-func main() {
-	mine := flag.Bool("mine", false, "Indicates whether it will run as miner")
-	init := flag.Bool("init", false, "Initialises the blockchain. Existing blockchain will be overriden. Overrules other options.")
-
-	flag.Parse()
-
-	if *init {
-		ioNewBlockchain()
-	}
-
-	err := initNode()
-	if err != nil {
-		common.LogFatal(err.Error())
-	}
-
-	if *mine {
-		go runMiningLoop()
-	}
-
-	go startEventLoop()
-
-	router := InitRouter()
-	router.Run(fmt.Sprintf(":%v", getSelfPort()))
-}
-
-type NodeError common.GenericError
 
 func initNode() error {
 	err := introduceToDns()
@@ -131,7 +135,7 @@ func retrieveDnsNodes() error {
 	}
 
 	nodes = common.Filter(nodes, func(n nd.Node) bool {
-		return n.Port != getSelfPort()
+		return n.Port != config["PORT"]
 	})
 
 	ndb := db.GetNodeDb()
