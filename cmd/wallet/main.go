@@ -25,6 +25,14 @@ var envVars []string = []string{
 	"DNS_HOST",
 	"DNS_PORT",
 }
+var _walletsDB *db.WalletDB
+
+func getWalletDb() *db.WalletDB {
+	if _walletsDB == nil {
+		_walletsDB = db.GetWalletDb(config["WALLETS_FILENAME"])
+	}
+	return _walletsDB
+}
 
 func main() {
 	simulate := flag.Bool("simulate", false, "simulates new wallets' and transactions'")
@@ -50,7 +58,7 @@ func runServer() {
 }
 
 func runSimulation() {
-	wdb := db.GetWalletDb()
+	wdb := getWalletDb()
 	walletCreationIntervalInSec, _ := strconv.Atoi(config["WALLET_CREATION_INTERVAL_IN_SEC"])
 	txCreationIntervalInSec, _ := strconv.Atoi(config["TRANSACTION_CREATION_INTERVAL_IN_SEC"])
 
@@ -86,7 +94,7 @@ func runSimulation() {
 }
 
 func getRandomWallets() ([]w.Wallet, error) {
-	wdb := db.GetWalletDb()
+	wdb := getWalletDb()
 
 	wallets, err := wdb.LoadWallets()
 	if err != nil {

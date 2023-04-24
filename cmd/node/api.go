@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/antavelos/blockchain/pkg/common"
-	"github.com/antavelos/blockchain/pkg/db"
 	"github.com/antavelos/blockchain/pkg/lib/bus"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 	nd "github.com/antavelos/blockchain/pkg/models/node"
@@ -77,7 +76,7 @@ func addTx(c *gin.Context) {
 }
 
 func getBlockchain(c *gin.Context) {
-	bdb := db.GetBlockchainDb()
+	bdb := getBlockchainDb()
 
 	blockchain, err := bdb.LoadBlockchain()
 	if err != nil {
@@ -89,7 +88,7 @@ func getBlockchain(c *gin.Context) {
 }
 
 func ping(c *gin.Context) {
-	ndb := db.GetNodeDb()
+	ndb := getNodeDb()
 
 	var node nd.Node
 	if err := c.BindJSON(&node); err != nil {

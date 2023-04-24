@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/antavelos/blockchain/pkg/common"
-	"github.com/antavelos/blockchain/pkg/db"
 	nd "github.com/antavelos/blockchain/pkg/models/node"
 
 	"github.com/gin-gonic/gin"
@@ -13,7 +12,7 @@ import (
 const nodesURI = "/nodes"
 
 func getNodes(c *gin.Context) {
-	ndb := db.GetNodeDb()
+	ndb := getNodeDb()
 
 	nodes, err := ndb.LoadNodes()
 	if err != nil {
@@ -26,7 +25,7 @@ func getNodes(c *gin.Context) {
 }
 
 func addNode(c *gin.Context) {
-	ndb := db.GetNodeDb()
+	ndb := getNodeDb()
 
 	var node nd.Node
 	if err := c.BindJSON(&node); err != nil {

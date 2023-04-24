@@ -19,16 +19,16 @@ type BlockchainDB DB
 type NodeDB DB
 type WalletDB DB
 
-func GetBlockchainDb() *BlockchainDB {
-	return &BlockchainDB{Filename: os.Getenv("BLOCKCHAIN_FILENAME")}
+func GetBlockchainDb(filename string) *BlockchainDB {
+	return &BlockchainDB{Filename: filename}
 }
 
-func GetNodeDb() *NodeDB {
-	return &NodeDB{Filename: os.Getenv("NODES_FILENAME")}
+func GetNodeDb(filename string) *NodeDB {
+	return &NodeDB{Filename: filename}
 }
 
-func GetWalletDb() *WalletDB {
-	return &WalletDB{Filename: os.Getenv("WALLETS_FILENAME")}
+func GetWalletDb(filename string) *WalletDB {
+	return &WalletDB{Filename: filename}
 }
 
 func createIfNotExists(filename string) error {

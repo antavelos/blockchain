@@ -4,13 +4,12 @@ import (
 	"sync"
 
 	"github.com/antavelos/blockchain/pkg/common"
-	"github.com/antavelos/blockchain/pkg/db"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 	"github.com/antavelos/blockchain/pkg/models/wallet"
 )
 
 func ioAddTx(tx bc.Transaction) (bc.Transaction, error) {
-	bdb := db.GetBlockchainDb()
+	bdb := getBlockchainDb()
 	m := sync.Mutex{}
 
 	m.Lock()
@@ -34,7 +33,7 @@ func ioAddTx(tx bc.Transaction) (bc.Transaction, error) {
 }
 
 func ioAddBlock(block bc.Block) (bc.Block, error) {
-	bdb := db.GetBlockchainDb()
+	bdb := getBlockchainDb()
 	m := sync.Mutex{}
 
 	m.Lock()
@@ -58,7 +57,7 @@ func ioAddBlock(block bc.Block) (bc.Block, error) {
 }
 
 func ioNewBlockchain() {
-	dbd := db.GetBlockchainDb()
+	dbd := getBlockchainDb()
 
 	blockchain := bc.NewBlockchain()
 
@@ -66,7 +65,7 @@ func ioNewBlockchain() {
 }
 
 func ioGetWallet() (wallet.Wallet, error) {
-	wdb := db.GetWalletDb()
+	wdb := getWalletDb()
 	wallets, err := wdb.LoadWallets()
 	if err != nil {
 		return wallet.Wallet{}, err

@@ -4,14 +4,13 @@ import (
 	"net/http"
 
 	"github.com/antavelos/blockchain/pkg/common"
-	"github.com/antavelos/blockchain/pkg/db"
 	"github.com/gin-gonic/gin"
 )
 
 const NewWalletEndpoint = "/wallets/new"
 
 func apiNewWallet(c *gin.Context) {
-	wdb := db.GetWalletDb()
+	wdb := getWalletDb()
 
 	wallet, err := wdb.CreateWallet()
 	if err != nil {

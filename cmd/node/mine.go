@@ -6,12 +6,11 @@ import (
 
 	node_client "github.com/antavelos/blockchain/pkg/clients/node"
 	"github.com/antavelos/blockchain/pkg/common"
-	"github.com/antavelos/blockchain/pkg/db"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 )
 
 func shareBlock(block bc.Block) error {
-	ndb := db.GetNodeDb()
+	ndb := getNodeDb()
 
 	nodes, err := ndb.LoadNodes()
 	if err != nil {
@@ -32,7 +31,7 @@ func shareBlock(block bc.Block) error {
 }
 
 func Mine() (bc.Block, error) {
-	bdb := db.GetBlockchainDb()
+	bdb := getBlockchainDb()
 
 	blockchain, err := bdb.LoadBlockchain()
 

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 
 	dns_client "github.com/antavelos/blockchain/pkg/clients/dns"
 	node_client "github.com/antavelos/blockchain/pkg/clients/node"
@@ -17,7 +16,7 @@ import (
 )
 
 func getDnsHost() string {
-	return fmt.Sprintf("http://%v:%v", os.Getenv("DNS_HOST"), os.Getenv("DNS_PORT"))
+	return fmt.Sprintf("http://%v:%v", config["DNS_HOST"], config["DNS_PORT"])
 }
 
 func getBlockchain() (*bc.Blockchain, error) {

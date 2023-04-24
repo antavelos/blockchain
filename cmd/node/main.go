@@ -29,6 +29,30 @@ var envVars []string = []string{
 	"WALLETS_HOST",
 	"WALLETS_PORT",
 }
+var _nodeDB *db.NodeDB
+var _blockchainDB *db.BlockchainDB
+var _walletsDB *db.WalletDB
+
+func getNodeDb() *db.NodeDB {
+	if _nodeDB == nil {
+		_nodeDB = db.GetNodeDb(config["NODES_FILENAME"])
+	}
+	return _nodeDB
+}
+
+func getBlockchainDb() *db.BlockchainDB {
+	if _blockchainDB == nil {
+		_blockchainDB = db.GetBlockchainDb(config["BLOCKCHAIN_FILENAME"])
+	}
+	return _blockchainDB
+}
+
+func getWalletDb() *db.WalletDB {
+	if _walletsDB == nil {
+		_walletsDB = db.GetWalletDb(config["WALLETS_FILENAME"])
+	}
+	return _walletsDB
+}
 
 func main() {
 	mine := flag.Bool("mine", false, "Indicates whether it will run as miner")
@@ -148,7 +172,7 @@ func retrieveDnsNodes() error {
 		return n.Port != config["PORT"]
 	})
 
-	ndb := db.GetNodeDb()
+	ndb := getNodeDb()
 	if err := ndb.SaveNodes(nodes); err != nil {
 		return common.GenericError{Msg: "couldn't save nodes received from DNS"}
 	}
@@ -157,7 +181,7 @@ func retrieveDnsNodes() error {
 }
 
 func pingNodes() error {
-	ndb := db.GetNodeDb()
+	ndb := getNodeDb()
 
 	nodes, err := ndb.LoadNodes()
 	if err != nil {
@@ -229,7 +253,7 @@ func rewardSelf() error {
 }
 
 func resolveLongestBlockchain() error {
-	ndb := db.GetNodeDb()
+	ndb := getNodeDb()
 
 	nodes, err := ndb.LoadNodes()
 	if err != nil {
@@ -250,7 +274,7 @@ func resolveLongestBlockchain() error {
 		return &blockchain
 	})
 
-	bdb := db.GetBlockchainDb()
+	bdb := getBlockchainDb()
 	localBlockchain, _ := bdb.LoadBlockchain()
 	blockchains = append(blockchains, localBlockchain)
 
@@ -268,8 +292,9 @@ func resolveLongestBlockchain() error {
 	return nil
 }
 
+// TODO: move to db
 func hasWallet() bool {
-	wdb := db.GetWalletDb()
+	wdb := getWalletDb()
 
 	wallets, _ := wdb.LoadWallets()
 
@@ -282,6 +307,6 @@ func createNewWallet() error {
 		return err
 	}
 
-	wdb := db.GetWalletDb()
+	wdb := getWalletDb()
 	return wdb.SaveWallet(wallet)
 }

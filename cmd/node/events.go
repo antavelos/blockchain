@@ -6,7 +6,6 @@ import (
 
 	node_client "github.com/antavelos/blockchain/pkg/clients/node"
 	"github.com/antavelos/blockchain/pkg/common"
-	"github.com/antavelos/blockchain/pkg/db"
 	"github.com/antavelos/blockchain/pkg/lib/bus"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 )
@@ -19,7 +18,7 @@ const (
 func shareTxHandler(event bus.DataEvent) {
 	tx := event.Data.(bc.Transaction)
 
-	ndb := db.GetNodeDb()
+	ndb := getNodeDb()
 	nodes, _ := ndb.LoadNodes()
 	responses := node_client.ShareTx(nodes, tx)
 	if responses.ErrorsRatio() > 0 {
@@ -43,7 +42,7 @@ func reward(tx bc.Transaction) error {
 		return common.GenericError{Msg: "failed to add reward transaction", Extra: err}
 	}
 
-	ndb := db.GetNodeDb()
+	ndb := getNodeDb()
 	nodes, err := ndb.LoadNodes()
 	if err != nil {
 		return common.GenericError{Msg: "failed to load nodes", Extra: err}
