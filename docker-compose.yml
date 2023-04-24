@@ -132,7 +132,7 @@ services:
       - DNS_PORT=3000
       - WALLETS_FILENAME=/data/wallets.json
       - WALLET_CREATION_INTERVAL_IN_SEC=300
-      - TRANSACTION_CREATION_INTERVAL_IN_SEC=20
+      - TRANSACTION_CREATION_INTERVAL_IN_SEC=2
     volumes:
       - ./data/wallets.json:/data/wallets.json
     command: /app/cmd/wallet/wallet -simulate

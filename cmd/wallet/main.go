@@ -22,6 +22,7 @@ var envVars []string = []string{
 	"PORT",
 	"WALLET_CREATION_INTERVAL_IN_SEC",
 	"TRANSACTION_CREATION_INTERVAL_IN_SEC",
+	"WALLETS_FILENAME",
 	"DNS_HOST",
 	"DNS_PORT",
 }
@@ -79,12 +80,12 @@ func runSimulation() {
 				common.LogError("Failed to create new transaction", err.Error())
 			}
 
-			tx, err = sendTransaction(tx)
+			sentTx, err := sendTransaction(tx)
 			msg := fmt.Sprintf("Transaction from %v to %v", tx.Body.Sender, tx.Body.Recipient)
 			if err != nil {
 				common.LogError(msg, "[FAIL]", err.Error())
 			} else {
-				common.LogError(msg, "[OK]", tx.Id)
+				common.LogError(msg, "[OK]", sentTx.Id)
 			}
 		}
 

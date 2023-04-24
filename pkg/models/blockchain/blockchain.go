@@ -4,9 +4,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,27 +13,21 @@ import (
 	"github.com/google/uuid"
 )
 
-func getMiningDifficulty() int {
-	diff, err := strconv.Atoi(os.Getenv("MINING_DIFFICULTY"))
-	if err != nil {
-		return 2
-	}
-	return diff
-}
-
-func getTxsPerBlock() int {
-	txsPerBlock, err := strconv.Atoi(os.Getenv("TXS_PER_BLOCK"))
-	if err != nil {
-		return 5
-	}
-
-	return txsPerBlock
-}
-
 type TransactionBody struct {
 	Sender    string  `json:"sender"`
 	Recipient string  `json:"recipient"`
 	Amount    float64 `json:"amount"`
+}
+
+func (txb TransactionBody) getBalanceForAddress(address string) float64 {
+	switch address {
+	case txb.Recipient:
+		return txb.Amount
+	case txb.Sender:
+		return -txb.Amount
+	default:
+		return 0.0
+	}
 }
 
 type Transaction struct {
@@ -44,39 +35,6 @@ type Transaction struct {
 	Timestamp int64           `json:"timestamp"`
 	Body      TransactionBody `json:"body"`
 	Signature string          `json:"signature"`
-}
-
-type Block struct {
-	Idx       int64         `json:"idx"`
-	Timestamp int64         `json:"timestamp"`
-	Txs       []Transaction `json:"txs"`
-	PrevHash  []byte        `json:"prevHash"`
-	Nonce     int64         `json:"nonce"`
-}
-
-type Blockchain struct {
-	Blocks []Block       `json:"block"`
-	TxPool []Transaction `json:"txPool"`
-}
-
-func UnmarshalBlockchain(data []byte) (blockchain Blockchain, err error) {
-	err = json.Unmarshal(data, &blockchain)
-	return
-}
-
-func UnmarshalBlockchainMany(data []byte) (blockchains []Blockchain, err error) {
-	err = json.Unmarshal(data, &blockchains)
-	return
-}
-
-func UnmarshalTransaction(data []byte) (tx Transaction, err error) {
-	err = json.Unmarshal(data, &tx)
-	return
-}
-
-func UnmarshalTransactionMany(data []byte) (txs []Transaction, err error) {
-	err = json.Unmarshal(data, &txs)
-	return
 }
 
 func NewTransaction(senderWallet wallet.Wallet, recipientWallet wallet.Wallet, amount float64) (Transaction, error) {
@@ -103,17 +61,16 @@ func NewTransaction(senderWallet wallet.Wallet, recipientWallet wallet.Wallet, a
 	}, nil
 }
 
-func (tx Transaction) GetBodyHash() ([]byte, error) {
-	marshalled, err := json.Marshal(tx.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return crypto.HashData(marshalled), nil
+func (tx Transaction) isCoinbase() bool {
+	return tx.Body.Sender == "0"
 }
 
-func (tx Transaction) IsCoinbase() bool {
-	return tx.Body.Sender == "0"
+type Block struct {
+	Idx       int64         `json:"idx"`
+	Timestamp int64         `json:"timestamp"`
+	Txs       []Transaction `json:"txs"`
+	PrevHash  []byte        `json:"prevHash"`
+	Nonce     int64         `json:"nonce"`
 }
 
 func (b *Block) HasTx(tx Transaction) bool {
@@ -125,7 +82,43 @@ func (b *Block) HasTx(tx Transaction) bool {
 	return false
 }
 
-func (bc *Blockchain) RemoveTx(tx Transaction) {
+func (b *Block) IsValid(difficulty int) bool {
+	hashedBlock := b.hash()
+
+	prefix := []byte(strings.Repeat("0", difficulty))
+
+	return bytes.Equal(hashedBlock[:difficulty], prefix)
+}
+
+func (b Block) hash() []byte {
+	blockBytes, _ := json.Marshal(b)
+
+	return crypto.HashData(blockBytes)
+}
+
+type Blockchain struct {
+	Blocks []Block       `json:"block"`
+	TxPool []Transaction `json:"txPool"`
+}
+
+func NewBlockchain() *Blockchain {
+	var blockchain Blockchain
+	blockchain.createGenesisBlock()
+
+	return &blockchain
+}
+
+func UnmarshalBlockchain(data []byte) (blockchain Blockchain, err error) {
+	err = json.Unmarshal(data, &blockchain)
+	return
+}
+
+func UnmarshalTransaction(data []byte) (tx Transaction, err error) {
+	err = json.Unmarshal(data, &tx)
+	return
+}
+
+func (bc *Blockchain) removeTx(tx Transaction) {
 	for i, bcTx := range bc.TxPool {
 		if tx.Id == bcTx.Id {
 			bc.TxPool = append(bc.TxPool[:i], bc.TxPool[i+1:]...)
@@ -134,24 +127,24 @@ func (bc *Blockchain) RemoveTx(tx Transaction) {
 	}
 }
 
-func (bc *Blockchain) RemoveTxs(txs []Transaction) {
+func (bc *Blockchain) removeTxs(txs []Transaction) {
 	for _, tx := range txs {
-		bc.RemoveTx(tx)
+		bc.removeTx(tx)
 	}
 }
 
 func (bc *Blockchain) AddBlock(block Block) error {
-	if err := bc.validateBlock(block); err != nil {
-		return common.GenericError{Msg: "block is not valid", Extra: err}
+	if !bc.verifyBlockHash(block) {
+		return common.GenericError{Msg: "block.PrevHash does not match with last block's hash"}
 	}
 
 	bc.Blocks = append(bc.Blocks, block)
-	bc.RemoveTxs(block.Txs)
+	bc.removeTxs(block.Txs)
 
 	return nil
 }
 
-func (bc *Blockchain) CreateGenesisBlock() {
+func (bc *Blockchain) createGenesisBlock() {
 	genesisBlock := Block{
 		Idx:       1,
 		Timestamp: time.Now().UnixMilli(),
@@ -162,16 +155,9 @@ func (bc *Blockchain) CreateGenesisBlock() {
 	bc.Blocks = append(bc.Blocks, genesisBlock)
 }
 
-func NewBlockchain() *Blockchain {
-	var blockchain Blockchain
-	blockchain.CreateGenesisBlock()
-
-	return &blockchain
-}
-
 func (bc *Blockchain) AddTx(tx Transaction) (Transaction, error) {
-	if err := bc.validateTransaction(tx); err != nil {
-		return Transaction{}, err
+	if !bc.verifyTxSenderBalance(tx) {
+		return Transaction{}, common.GenericError{Msg: "sender has not sufficient funds"}
 	}
 
 	if tx.Id == "" {
@@ -186,16 +172,13 @@ func (bc *Blockchain) AddTx(tx Transaction) (Transaction, error) {
 	return tx, nil
 }
 
-func (bc *Blockchain) NewBlock() (Block, error) {
+func (bc *Blockchain) HasPendingTxs() bool {
+	return len(bc.TxPool) > 0
+}
+
+func (bc *Blockchain) NewBlock(txsPerBlock int) (Block, error) {
 	txPoolLength := len(bc.TxPool)
 
-	if txPoolLength == 0 {
-		return Block{}, common.GenericError{Msg: "no pending transactions found"}
-	}
-
-	lastBlock := bc.Blocks[len(bc.Blocks)-1]
-
-	txsPerBlock := getTxsPerBlock()
 	txCount := txsPerBlock
 	if txPoolLength < txsPerBlock {
 		txCount = txPoolLength
@@ -204,83 +187,76 @@ func (bc *Blockchain) NewBlock() (Block, error) {
 	latestTxs := make([]Transaction, txCount)
 	copy(latestTxs, bc.TxPool[:txCount])
 
-	hashedLastBlock, err := hashBlock(lastBlock)
-	if err != nil {
-		return Block{}, common.GenericError{Msg: "failed to hash last block", Extra: err}
-	}
+	lastBlock := bc.lastBlock()
 	newBlock := Block{
 		Idx:       lastBlock.Idx + 1,
 		Timestamp: time.Now().UnixMilli(),
 		Txs:       latestTxs,
-		PrevHash:  hashedLastBlock,
+		PrevHash:  lastBlock.hash(),
 		Nonce:     0,
 	}
-
-	common.LogInfo("Mining...")
-	for !blockSatisfiesHashRule(newBlock) {
-		newBlock.Nonce += 1
-	}
-	common.LogInfo("Found Nonce", newBlock.Nonce)
 
 	return newBlock, nil
 }
 
-func GetMaxLengthBlockchain(blockchains []*Blockchain) *Blockchain {
-	if len(blockchains) == 0 {
-		return &Blockchain{}
+func (bc *Blockchain) verifyBlockHash(block Block) bool {
+	return bytes.Equal(block.PrevHash, bc.lastBlock().hash())
+}
+
+func (bc Blockchain) verifyTxSenderBalance(tx Transaction) bool {
+	if tx.isCoinbase() {
+		return true
 	}
 
-	maxLengthBlockchain := blockchains[0]
+	return tx.Body.Amount <= bc.getSenderBalance(tx.Body.Sender)
+}
 
-	for _, blockchain := range blockchains[1:] {
-		if maxLengthBlockchain == nil || len(blockchain.Blocks) > len(maxLengthBlockchain.Blocks) {
-			maxLengthBlockchain = blockchain
+func (bc Blockchain) getSenderBalance(sender string) float64 {
+	senderBalance := 0.0
+
+	for _, poolTx := range bc.TxPool {
+		senderBalance += poolTx.Body.getBalanceForAddress(sender)
+	}
+
+	for _, block := range bc.Blocks {
+		for _, blockTx := range block.Txs {
+			senderBalance += blockTx.Body.getBalanceForAddress(sender)
 		}
 	}
 
-	return maxLengthBlockchain
+	return senderBalance
 }
 
-func blockSatisfiesHashRule(block Block) bool {
-	hashed, _ := hashBlock(block)
-
-	difficulty := getMiningDifficulty()
-
-	prefix := []byte(strings.Repeat("0", difficulty))
-
-	return bytes.Equal(hashed[:difficulty], prefix)
-}
-
-func (bc *Blockchain) validateBlock(block Block) error {
-	difficulty := getMiningDifficulty()
-
-	if !blockSatisfiesHashRule(block) {
-		msg := fmt.Sprintf("block does not start with %v '0'", difficulty)
-		return common.GenericError{Msg: msg}
+// TODO: to be used
+func (bc *Blockchain) IsValid() bool {
+	if len(bc.Blocks) == 1 {
+		return true
 	}
 
-	lastBlockHashed, _ := hashBlock(bc.Blocks[len(bc.Blocks)-1])
+	for i := 1; i < len(bc.Blocks); i++ {
+		currBlock := bc.Blocks[i]
+		prevBlock := bc.Blocks[i-1]
 
-	if !bytes.Equal(block.PrevHash, lastBlockHashed) {
-		return common.GenericError{Msg: "block.PrevHash does not match with last block's hash"}
+		if !bytes.Equal(currBlock.PrevHash, prevBlock.hash()) {
+			return false
+		}
 	}
 
-	return nil
+	return true
 }
 
-func getAddressBalanceFromTransactionBody(address string, txb TransactionBody) float64 {
-	switch address {
-	case txb.Recipient:
-		return txb.Amount
-	case txb.Sender:
-		return -txb.Amount
-	default:
-		return 0.0
+func (bc *Blockchain) lastBlock() Block {
+	blocksNum := len(bc.Blocks)
+
+	if blocksNum == 0 {
+		return Block{}
 	}
+
+	return bc.Blocks[blocksNum-1]
 }
 
-func (bc Blockchain) validateTransaction(tx Transaction) error {
-	if tx.IsCoinbase() {
+func (tx Transaction) Validate() error {
+	if tx.isCoinbase() {
 		return nil
 	}
 
@@ -320,68 +296,41 @@ func (bc Blockchain) validateTransaction(tx Transaction) error {
 		return common.GenericError{Msg: "failed to verify signature"}
 	}
 
-	senderBalance := bc.getSenderBalance(tx.Body.Sender)
-	if tx.Body.Amount <= senderBalance {
-		return common.GenericError{Msg: "sender has not sufficient funds"}
-	}
-
 	return nil
 }
 
-func (bc Blockchain) getSenderBalance(sender string) float64 {
-	senderBalance := 0.0
-
-	for _, ptx := range bc.TxPool {
-		senderBalance += getAddressBalanceFromTransactionBody(sender, ptx.Body)
+func UpdateBlockchain(oldBlockchain *Blockchain, newBlockchain *Blockchain) *Blockchain {
+	if oldBlockchain == nil {
+		return newBlockchain
 	}
 
-	for _, block := range bc.Blocks {
-		for _, btx := range block.Txs {
-			senderBalance += getAddressBalanceFromTransactionBody(sender, btx.Body)
+	// TODO: append the blocks diff
+	oldBlockchain.Blocks = newBlockchain.Blocks
+
+	// TODO: to refactor
+	for i := len(oldBlockchain.Blocks) - 1; i > 0; i-- {
+		for _, tx := range oldBlockchain.TxPool {
+			if oldBlockchain.Blocks[i].HasTx(tx) {
+				oldBlockchain.removeTx(tx)
+			}
 		}
 	}
 
-	return senderBalance
+	return oldBlockchain
 }
 
-// TODO: to be used
-func isValid(bc Blockchain) bool {
-	if len(bc.Blocks) == 1 {
-		return true
+func GetMaxLengthBlockchain(blockchains []*Blockchain) *Blockchain {
+	if len(blockchains) == 0 {
+		return &Blockchain{}
 	}
 
-	for i := 1; i < len(bc.Blocks); i++ {
-		currBlock := bc.Blocks[i]
-		prevBlock := bc.Blocks[i-1]
-		hashedPrevBlock, err := hashBlock(prevBlock)
+	maxLengthBlockchain := blockchains[0]
 
-		if err != nil {
-			return false
-		}
-
-		if !bytes.Equal(currBlock.PrevHash, hashedPrevBlock) {
-			return false
+	for _, blockchain := range blockchains[1:] {
+		if maxLengthBlockchain == nil || len(blockchain.Blocks) > len(maxLengthBlockchain.Blocks) {
+			maxLengthBlockchain = blockchain
 		}
 	}
 
-	return true
-}
-
-func getLastBlock(bc Blockchain) Block {
-	blocksNum := len(bc.Blocks)
-
-	if blocksNum == 0 {
-		return Block{}
-	}
-
-	return bc.Blocks[blocksNum-1]
-}
-
-func hashBlock(block Block) ([]byte, error) {
-	jsonBlock, err := json.Marshal(block)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return crypto.HashData(jsonBlock), nil
+	return maxLengthBlockchain
 }

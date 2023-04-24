@@ -72,26 +72,6 @@ func (db *BlockchainDB) SaveBlockchain(blockchain bc.Blockchain) error {
 	return write(db.Filename, blockchainBytes)
 }
 
-func updateBlockchain(oldBlockchain *bc.Blockchain, newBlockchain *bc.Blockchain) *bc.Blockchain {
-	if oldBlockchain == nil {
-		return newBlockchain
-	}
-
-	// TODO: append the blocks diff
-	oldBlockchain.Blocks = newBlockchain.Blocks
-
-	// TODO: to refactor
-	for i := len(oldBlockchain.Blocks) - 1; i > 0; i-- {
-		for _, tx := range oldBlockchain.TxPool {
-			if oldBlockchain.Blocks[i].HasTx(tx) {
-				oldBlockchain.RemoveTx(tx)
-			}
-		}
-	}
-
-	return oldBlockchain
-}
-
 func (db *BlockchainDB) UpdateBlockchain(newBlockchain *bc.Blockchain) error {
 
 	m := sync.Mutex{}
@@ -104,7 +84,7 @@ func (db *BlockchainDB) UpdateBlockchain(newBlockchain *bc.Blockchain) error {
 		return err
 	}
 
-	blockchain = updateBlockchain(blockchain, newBlockchain)
+	blockchain = bc.UpdateBlockchain(blockchain, newBlockchain)
 
 	return db.SaveBlockchain(*blockchain)
 }
@@ -213,4 +193,11 @@ func (db *WalletDB) CreateWallet() (*w.Wallet, error) {
 	}
 
 	return wallet, nil
+}
+
+func (db *WalletDB) IsEmpty() bool {
+
+	wallets, _ := db.LoadWallets()
+
+	return len(wallets) == 0
 }

@@ -30,6 +30,15 @@ func shareBlock(block bc.Block) error {
 	return nil
 }
 
+func mine(block *bc.Block, difficulty int) {
+
+	common.LogInfo("Mining...")
+	for !block.IsValid(difficulty) {
+		block.Nonce += 1
+	}
+	common.LogInfo("New block mined with nonce", block.Nonce)
+}
+
 func Mine() (bc.Block, error) {
 	bdb := getBlockchainDb()
 
@@ -39,10 +48,19 @@ func Mine() (bc.Block, error) {
 		return bc.Block{}, common.GenericError{Msg: "blockchain currently not available"}
 	}
 
-	block, err := blockchain.NewBlock()
+	if !blockchain.HasPendingTxs() {
+		return bc.Block{}, common.GenericError{Msg: "no pending transactions found"}
+	}
+
+	txsPerBlock := getTxsNumPerBlock()
+	block, err := blockchain.NewBlock(txsPerBlock)
 	if err != nil {
 		return bc.Block{}, err
 	}
+
+	difficulty := getMiningDifficulty()
+
+	mine(&block, difficulty)
 
 	err = shareBlock(block)
 	if err != nil {

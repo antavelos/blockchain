@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/antavelos/blockchain/pkg/common"
@@ -9,6 +10,11 @@ import (
 )
 
 func ioAddTx(tx bc.Transaction) (bc.Transaction, error) {
+	err := tx.Validate()
+	if err != nil {
+		return bc.Transaction{}, err
+	}
+
 	bdb := getBlockchainDb()
 	m := sync.Mutex{}
 
@@ -33,6 +39,12 @@ func ioAddTx(tx bc.Transaction) (bc.Transaction, error) {
 }
 
 func ioAddBlock(block bc.Block) (bc.Block, error) {
+	difficulty := getMiningDifficulty()
+
+	if !block.IsValid(difficulty) {
+		return bc.Block{}, common.GenericError{Msg: fmt.Sprintf("block does not start with %v '0'", difficulty)}
+	}
+
 	bdb := getBlockchainDb()
 	m := sync.Mutex{}
 
@@ -44,8 +56,7 @@ func ioAddBlock(block bc.Block) (bc.Block, error) {
 		return block, common.GenericError{Msg: "blockchain currently not available"}
 	}
 
-	err = blockchain.AddBlock(block)
-	if err != nil {
+	if err := blockchain.AddBlock(block); err != nil {
 		return block, err
 	}
 

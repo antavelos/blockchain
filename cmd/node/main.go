@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,6 +21,10 @@ import (
 	nd "github.com/antavelos/blockchain/pkg/models/node"
 )
 
+const defaultTxsPerBlock = 10
+const defaultMiningDifficulty = 2
+const defaultRewardAmount = 1.0
+
 var config cfg.Config
 
 var envVars []string = []string{
@@ -28,7 +33,14 @@ var envVars []string = []string{
 	"DNS_PORT",
 	"WALLETS_HOST",
 	"WALLETS_PORT",
+	"NODES_FILENAME",
+	"BLOCKCHAIN_FILENAME",
+	"WALLETS_FILENAME",
+	"MINING_DIFFICULTY",
+	"TXS_PER_BLOCK",
+	"REWARD_AMOUNT",
 }
+
 var _nodeDB *db.NodeDB
 var _blockchainDB *db.BlockchainDB
 var _walletsDB *db.WalletDB
@@ -52,6 +64,40 @@ func getWalletDb() *db.WalletDB {
 		_walletsDB = db.GetWalletDb(config["WALLETS_FILENAME"])
 	}
 	return _walletsDB
+}
+
+func atoiConfigValue(key string, defaultVal int) int {
+	value, err := strconv.Atoi(config[key])
+	if err != nil {
+		msg := fmt.Sprintf("Couldn't parse '%v' config value. Using default value: %v", key, defaultTxsPerBlock)
+		common.LogInfo(msg)
+		return defaultVal
+	}
+
+	return value
+}
+
+func atofConfigValue(key string, defaultVal float64) float64 {
+	value, err := strconv.ParseFloat(config[key], 1)
+	if err != nil {
+		msg := fmt.Sprintf("Couldn't parse '%v' config value. Using default value: %v", key, defaultTxsPerBlock)
+		common.LogInfo(msg)
+		return defaultVal
+	}
+
+	return value
+}
+
+func getMiningDifficulty() int {
+	return atoiConfigValue("MINING_DIFFICULTY", defaultMiningDifficulty)
+}
+
+func getTxsNumPerBlock() int {
+	return atoiConfigValue("TXS_PER_BLOCK", defaultTxsPerBlock)
+}
+
+func getRewardAmount() float64 {
+	return atofConfigValue("REWARD_AMOUNT", defaultRewardAmount)
 }
 
 func main() {
@@ -174,7 +220,7 @@ func retrieveDnsNodes() error {
 
 	ndb := getNodeDb()
 	if err := ndb.SaveNodes(nodes); err != nil {
-		return common.GenericError{Msg: "couldn't save nodes received from DNS"}
+		return common.GenericError{Msg: "couldn't save nodes received from DNS", Extra: err}
 	}
 
 	return nil
@@ -205,7 +251,6 @@ func pingNodes() error {
 }
 
 func runMiningLoop() {
-	i := 0
 	for {
 		block, err := Mine()
 		if err != nil {
@@ -222,18 +267,20 @@ func runMiningLoop() {
 
 			// TODO: check who should do the reward
 			//
-			err := rewardSelf()
+			rewardAmount := getRewardAmount()
+			err := rewardSelf(rewardAmount)
 			if err != nil {
-				common.LogError("failed to create reward transaction: %v", err.Error())
+				common.LogError("failed to create reward transaction", err.Error())
+			} else {
+				common.LogInfo("rewarded self with", rewardAmount)
 			}
 		}
 
 		time.Sleep(5 * time.Second)
-		i = i + 1
 	}
 }
 
-func rewardSelf() error {
+func rewardSelf(rewardAmount float64) error {
 	wallet, err := ioGetWallet()
 	if err != nil {
 		return err
@@ -243,7 +290,7 @@ func rewardSelf() error {
 		Body: bc.TransactionBody{
 			Sender:    "0",
 			Recipient: hex.EncodeToString(wallet.Address),
-			Amount:    1.0,
+			Amount:    rewardAmount,
 		},
 	}
 
@@ -292,13 +339,10 @@ func resolveLongestBlockchain() error {
 	return nil
 }
 
-// TODO: move to db
 func hasWallet() bool {
 	wdb := getWalletDb()
 
-	wallets, _ := wdb.LoadWallets()
-
-	return len(wallets) > 0
+	return !wdb.IsEmpty()
 }
 
 func createNewWallet() error {
