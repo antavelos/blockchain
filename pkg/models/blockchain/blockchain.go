@@ -40,8 +40,8 @@ type Transaction struct {
 func NewTransaction(senderWallet wallet.Wallet, recipientWallet wallet.Wallet, amount float64) (Transaction, error) {
 
 	txb := TransactionBody{
-		Sender:    hex.EncodeToString(senderWallet.Address),
-		Recipient: hex.EncodeToString(recipientWallet.Address),
+		Sender:    senderWallet.AddressString(),
+		Recipient: recipientWallet.AddressString(),
 		Amount:    amount,
 	}
 

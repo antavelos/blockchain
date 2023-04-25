@@ -81,7 +81,7 @@ func runSimulation() {
 			if err != nil {
 				common.LogError("New wallet [FAIL]", err.Error())
 			} else {
-				common.LogInfo("New wallet [OK]", hex.EncodeToString(w.Address))
+				common.LogInfo("New wallet [OK]", w.AddressString())
 			}
 		}
 

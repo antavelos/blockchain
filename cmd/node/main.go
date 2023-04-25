@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"net"
@@ -20,6 +19,7 @@ import (
 	nd "github.com/antavelos/blockchain/pkg/models/node"
 )
 
+const coinBaseSenderAddress = "0"
 const defaultTxsPerBlock = 10
 const defaultMiningDifficulty = 2
 const defaultRewardAmount = 1.0
@@ -265,8 +265,8 @@ func rewardSelf(rewardAmount float64) error {
 
 	rewardTx := bc.Transaction{
 		Body: bc.TransactionBody{
-			Sender:    "0",
-			Recipient: hex.EncodeToString(wallet.Address),
+			Sender:    coinBaseSenderAddress,
+			Recipient: wallet.AddressString(),
 			Amount:    rewardAmount,
 		},
 	}

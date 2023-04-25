@@ -45,3 +45,7 @@ func (w Wallet) Sign(message []byte) (string, error) {
 
 	return hex.EncodeToString(signature), err
 }
+
+func (w Wallet) AddressString() string {
+	return hex.EncodeToString(w.Address)
+}
