@@ -65,6 +65,50 @@ func (tx Transaction) isCoinbase() bool {
 	return tx.Body.Sender == "0"
 }
 
+func (tx Transaction) Validate() error {
+	if tx.isCoinbase() {
+		return nil
+	}
+
+	txBodyBytes, err := json.Marshal(tx.Body)
+	if err != nil {
+		return common.GenericError{Msg: "failed to marshal transaction body"}
+	}
+
+	txBodyHash := crypto.HashData(txBodyBytes)
+
+	signatureBytes, err := hex.DecodeString(tx.Signature)
+	if err != nil {
+		return common.GenericError{Msg: "failed to decode signature"}
+	}
+
+	publicKeyBytes, err := crypto.PublicKeyFromSignature(txBodyHash, signatureBytes)
+	if err != nil {
+		return common.GenericError{Msg: "failed to retrieve public key from signature"}
+	}
+
+	publicKey, err := crypto.UnmarshalPublicKey(publicKeyBytes)
+	if err != nil {
+		return common.GenericError{Msg: "failed to unmarshal public key"}
+	}
+
+	senderBytes, err := hex.DecodeString(tx.Body.Sender)
+	if err != nil {
+		return common.GenericError{Msg: "failed to decode sender"}
+	}
+
+	senderAddress := crypto.AddressFromPublicKey(publicKey)
+	if !bytes.Equal(senderAddress, senderBytes) {
+		return common.GenericError{Msg: "sender address does not match with the public key of the signature"}
+	}
+
+	if !crypto.VerifySignature(txBodyHash, publicKeyBytes, signatureBytes) {
+		return common.GenericError{Msg: "failed to verify signature"}
+	}
+
+	return nil
+}
+
 type Block struct {
 	Idx       int64         `json:"idx"`
 	Timestamp int64         `json:"timestamp"`
@@ -253,50 +297,6 @@ func (bc *Blockchain) lastBlock() Block {
 	}
 
 	return bc.Blocks[blocksNum-1]
-}
-
-func (tx Transaction) Validate() error {
-	if tx.isCoinbase() {
-		return nil
-	}
-
-	txBodyBytes, err := json.Marshal(tx.Body)
-	if err != nil {
-		return common.GenericError{Msg: "failed to marshal transaction body"}
-	}
-
-	txBodyHash := crypto.HashData(txBodyBytes)
-
-	signatureBytes, err := hex.DecodeString(tx.Signature)
-	if err != nil {
-		return common.GenericError{Msg: "failed to decode signature"}
-	}
-
-	publicKeyBytes, err := crypto.PublicKeyFromSignature(txBodyHash, signatureBytes)
-	if err != nil {
-		return common.GenericError{Msg: "failed to retrieve public key from signature"}
-	}
-
-	publicKey, err := crypto.UnmarshalPublicKey(publicKeyBytes)
-	if err != nil {
-		return common.GenericError{Msg: "failed to unmarshal public key"}
-	}
-
-	senderBytes, err := hex.DecodeString(tx.Body.Sender)
-	if err != nil {
-		return common.GenericError{Msg: "failed to decode sender"}
-	}
-
-	senderAddress := crypto.AddressFromPublicKey(publicKey)
-	if !bytes.Equal(senderAddress, senderBytes) {
-		return common.GenericError{Msg: "sender address does not match with the public key of the signature"}
-	}
-
-	if !crypto.VerifySignature(txBodyHash, publicKeyBytes, signatureBytes) {
-		return common.GenericError{Msg: "failed to verify signature"}
-	}
-
-	return nil
 }
 
 func UpdateBlockchain(oldBlockchain *Blockchain, newBlockchain *Blockchain) *Blockchain {

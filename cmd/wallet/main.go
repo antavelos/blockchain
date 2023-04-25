@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"strconv"
 	"time"
 
 	dns_client "github.com/antavelos/blockchain/pkg/clients/dns"
@@ -17,6 +16,9 @@ import (
 	w "github.com/antavelos/blockchain/pkg/models/wallet"
 )
 
+const defaultWalletCreationIntervalInSec = 300
+const defaultTransactionCreationIntervalInSec = 4
+
 var config cfg.Config
 var envVars []string = []string{
 	"PORT",
@@ -26,6 +28,7 @@ var envVars []string = []string{
 	"DNS_HOST",
 	"DNS_PORT",
 }
+
 var _walletsDB *db.WalletDB
 
 func getWalletDb() *db.WalletDB {
@@ -33,6 +36,14 @@ func getWalletDb() *db.WalletDB {
 		_walletsDB = db.GetWalletDb(config["WALLETS_FILENAME"])
 	}
 	return _walletsDB
+}
+
+func getWallerCreationIntervalInSec() int {
+	return config.GetValueAtoi("WALLET_CREATION_INTERVAL_IN_SEC", defaultWalletCreationIntervalInSec)
+}
+
+func getDefaultTransactionCreationIntervalInSec() int {
+	return config.GetValueAtoi("TRANSACTION_CREATION_INTERVAL_IN_SEC", defaultTransactionCreationIntervalInSec)
 }
 
 func main() {
@@ -60,8 +71,8 @@ func runServer() {
 
 func runSimulation() {
 	wdb := getWalletDb()
-	walletCreationIntervalInSec, _ := strconv.Atoi(config["WALLET_CREATION_INTERVAL_IN_SEC"])
-	txCreationIntervalInSec, _ := strconv.Atoi(config["TRANSACTION_CREATION_INTERVAL_IN_SEC"])
+	walletCreationIntervalInSec := getWallerCreationIntervalInSec()
+	txCreationIntervalInSec := getDefaultTransactionCreationIntervalInSec()
 
 	i := 0
 	for {
@@ -78,6 +89,7 @@ func runSimulation() {
 			tx, err := createTransaction()
 			if err != nil {
 				common.LogError("Failed to create new transaction", err.Error())
+				continue
 			}
 
 			sentTx, err := sendTransaction(tx)
@@ -85,7 +97,7 @@ func runSimulation() {
 			if err != nil {
 				common.LogError(msg, "[FAIL]", err.Error())
 			} else {
-				common.LogError(msg, "[OK]", sentTx.Id)
+				common.LogInfo(msg, "[OK]", sentTx.Id)
 			}
 		}
 

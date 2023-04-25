@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
 	"time"
 
@@ -66,38 +65,16 @@ func getWalletDb() *db.WalletDB {
 	return _walletsDB
 }
 
-func atoiConfigValue(key string, defaultVal int) int {
-	value, err := strconv.Atoi(config[key])
-	if err != nil {
-		msg := fmt.Sprintf("Couldn't parse '%v' config value. Using default value: %v", key, defaultTxsPerBlock)
-		common.LogInfo(msg)
-		return defaultVal
-	}
-
-	return value
-}
-
-func atofConfigValue(key string, defaultVal float64) float64 {
-	value, err := strconv.ParseFloat(config[key], 1)
-	if err != nil {
-		msg := fmt.Sprintf("Couldn't parse '%v' config value. Using default value: %v", key, defaultTxsPerBlock)
-		common.LogInfo(msg)
-		return defaultVal
-	}
-
-	return value
-}
-
 func getMiningDifficulty() int {
-	return atoiConfigValue("MINING_DIFFICULTY", defaultMiningDifficulty)
+	return config.GetValueAtoi("MINING_DIFFICULTY", defaultMiningDifficulty)
 }
 
 func getTxsNumPerBlock() int {
-	return atoiConfigValue("TXS_PER_BLOCK", defaultTxsPerBlock)
+	return config.GetValueAtoi("TXS_PER_BLOCK", defaultTxsPerBlock)
 }
 
 func getRewardAmount() float64 {
-	return atofConfigValue("REWARD_AMOUNT", defaultRewardAmount)
+	return config.GetValueAtof("REWARD_AMOUNT", defaultRewardAmount)
 }
 
 func main() {
