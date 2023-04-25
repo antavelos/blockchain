@@ -6,6 +6,7 @@ import (
 
 	node_client "github.com/antavelos/blockchain/pkg/clients/node"
 	"github.com/antavelos/blockchain/pkg/common"
+	"github.com/antavelos/blockchain/pkg/lib/bus"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 )
 
@@ -18,6 +19,12 @@ func shareBlock(block bc.Block) error {
 	}
 
 	responses := node_client.ShareBlock(nodes, block)
+
+	if responses.HasConnectionRefused() {
+		common.LogInfo("Refresing DNS nodes")
+		bus.Publish(RefreshDnsNodes, nil)
+	}
+
 	if responses.ErrorsRatio() > 0 {
 		msg := fmt.Sprintf("new block was not accepted by some nodes: \n%v", strings.Join(responses.ErrorStrings(), "\n"))
 		common.LogError(msg)

@@ -38,6 +38,7 @@ var envVars []string = []string{
 	"MINING_DIFFICULTY",
 	"TXS_PER_BLOCK",
 	"REWARD_AMOUNT",
+	"NODE_NAME",
 }
 
 var _nodeDB *db.NodeDB
@@ -145,7 +146,7 @@ func getSelfNode() (nd.Node, error) {
 		return nd.Node{}, err
 	}
 
-	return nd.NewNode("", ip, config["PORT"]), nil
+	return nd.NewNode(config["NODE_NAME"], ip, config["PORT"]), nil
 }
 
 func initNode() error {
@@ -185,6 +186,7 @@ func introduceToDns() error {
 	return dns_client.AddDnsNode(getDnsHost(), selfNode)
 }
 
+// TODO: move to dedicated module
 func retrieveDnsNodes() error {
 	nodes, err := dns_client.GetDnsNodes(getDnsHost())
 	if err != nil {
@@ -192,7 +194,7 @@ func retrieveDnsNodes() error {
 	}
 
 	nodes = common.Filter(nodes, func(n nd.Node) bool {
-		return n.Port != config["PORT"]
+		return n.Name != config["NODE_NAME"]
 	})
 
 	ndb := getNodeDb()
@@ -217,6 +219,10 @@ func pingNodes() error {
 	}
 
 	responses := node_client.PingNodes(nodes, selfNode)
+
+	if responses.HasConnectionRefused() {
+		bus.Publish(RefreshDnsNodes, nil)
+	}
 
 	if responses.ErrorsRatio() < 1 {
 		return common.GenericError{
@@ -285,6 +291,11 @@ func resolveLongestBlockchain() error {
 	}
 
 	responses := node_client.GetBlockchains(nodes)
+
+	if responses.HasConnectionRefused() {
+		bus.Publish(RefreshDnsNodes, nil)
+	}
+
 	blockchains := common.Map(responses, func(response rest.Response) *bc.Blockchain {
 		if response.Err != nil {
 			return &bc.Blockchain{}

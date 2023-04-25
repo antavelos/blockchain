@@ -21,6 +21,11 @@ func NewNode(name string, ip string, port string) Node {
 	}
 }
 
+func (n *Node) Update(updated Node) {
+	n.IP = updated.IP
+	n.Port = updated.Port
+}
+
 func (n Node) GetHost() string {
 	return fmt.Sprintf("%v://%v:%v", n.Schema, n.IP, n.Port)
 }

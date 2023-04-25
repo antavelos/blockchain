@@ -124,14 +124,17 @@ func (db *NodeDB) LoadNodes() ([]nd.Node, error) {
 	return nodes, nil
 }
 
-func (db *NodeDB) AddNode(node nd.Node) error {
+func (db *NodeDB) AddNode(newNode nd.Node) error {
 	nodes, err := db.LoadNodes()
 	if err != nil {
 		return common.GenericError{Msg: "nodes not available"}
 	}
 
-	if !containsNode(nodes, node) {
-		nodes = append(nodes, node)
+	index := containsNode(nodes, newNode)
+	if index == -1 {
+		nodes = append(nodes, newNode)
+	} else {
+		nodes[index].Update(newNode)
 	}
 
 	err = db.SaveNodes(nodes)
@@ -142,13 +145,13 @@ func (db *NodeDB) AddNode(node nd.Node) error {
 	return nil
 }
 
-func containsNode(nodes []nd.Node, node nd.Node) bool {
-	for _, n := range nodes {
-		if n.GetHost() == node.GetHost() {
-			return true
+func containsNode(nodes []nd.Node, node nd.Node) int {
+	for i, n := range nodes {
+		if n.Name == node.Name {
+			return i
 		}
 	}
-	return false
+	return -1
 }
 
 func (db *WalletDB) SaveWallet(wallet w.Wallet) error {

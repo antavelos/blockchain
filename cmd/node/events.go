@@ -13,6 +13,7 @@ import (
 const (
 	ShareTransaction bus.Topic = iota
 	RewardTransaction
+	RefreshDnsNodes
 )
 
 func shareTxHandler(event bus.DataEvent) {
@@ -32,6 +33,14 @@ func rewardTxHandler(event bus.DataEvent) {
 	err := reward(tx)
 	if err != nil {
 		common.LogError(err.Error())
+	}
+}
+
+func refreshDnsNodesHAndler() {
+	// TODO: to be called from dedicated module
+	err := retrieveDnsNodes()
+	if err != nil {
+		common.LogError("failed to refresh DNS nodes", err.Error())
 	}
 }
 
@@ -61,6 +70,7 @@ func reward(tx bc.Transaction) error {
 func startEventLoop() {
 	shareTxChan := bus.Subscribe(ShareTransaction)
 	rewardChan := bus.Subscribe(RewardTransaction)
+	refreshDnsNodesChan := bus.Subscribe(RefreshDnsNodes)
 
 	for {
 		select {
@@ -68,7 +78,8 @@ func startEventLoop() {
 			go shareTxHandler(shareTx)
 		case rewardTx := <-*rewardChan:
 			go rewardTxHandler(rewardTx)
+		case <-*refreshDnsNodesChan:
+			go refreshDnsNodesHAndler()
 		}
 	}
-
 }

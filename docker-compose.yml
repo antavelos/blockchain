@@ -25,6 +25,7 @@ services:
       - 3001:3001
     environment:
       - PORT=3001
+      - NODE_NAME=node-1
     env_file:
       - .node_env
     volumes:
@@ -41,11 +42,12 @@ services:
     depends_on:
       - dns
       - wallets
-      - node-server-1
+      # - node-server-1
     ports:
       - 3002:3002
     environment:
       - PORT=3002
+      - NODE_NAME=node-2
     env_file:
       - .node_env
     volumes:
@@ -62,11 +64,12 @@ services:
     depends_on:
       - dns
       - wallets
-      - node-server-2
+      # - node-server-2
     ports:
       - 3003:3003
     environment:
       - PORT=3003
+      - NODE_NAME=node-3
     env_file:
       - .node_env
     volumes:
@@ -83,11 +86,12 @@ services:
     depends_on:
       - dns
       - wallets
-      - node-server-3
+      # - node-server-3
     ports:
       - 3004:3004
     environment:
       - PORT=3004
+      - NODE_NAME=node-4
     env_file:
       - .node_env
     volumes:
@@ -104,11 +108,12 @@ services:
     depends_on:
       - dns
       - wallets
-      - node-server-4
+      # - node-server-4
     ports:
       - 3005:3005
     environment:
       - PORT=3005
+      - NODE_NAME=node-5
     env_file:
       - .node_env
     volumes:
