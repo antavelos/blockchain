@@ -50,7 +50,7 @@ func NewTransaction(senderWallet wallet.Wallet, recipientWallet wallet.Wallet, a
 		return Transaction{}, common.GenericError{Msg: "failed to marshal transaction body", Extra: err}
 	}
 
-	signature, err := senderWallet.Sign(crypto.HashData(txbBytes))
+	signature, err := senderWallet.Sign(txbBytes)
 	if err != nil {
 		return Transaction{}, common.GenericError{Msg: "failed to sign transaction body", Extra: err}
 	}
@@ -75,14 +75,12 @@ func (tx Transaction) Validate() error {
 		return common.GenericError{Msg: "failed to marshal transaction body"}
 	}
 
-	txBodyHash := crypto.HashData(txBodyBytes)
-
 	signatureBytes, err := hex.DecodeString(tx.Signature)
 	if err != nil {
 		return common.GenericError{Msg: "failed to decode signature"}
 	}
 
-	publicKeyBytes, err := crypto.PublicKeyFromSignature(txBodyHash, signatureBytes)
+	publicKeyBytes, err := crypto.PublicKeyFromSignature(txBodyBytes, signatureBytes)
 	if err != nil {
 		return common.GenericError{Msg: "failed to retrieve public key from signature"}
 	}
@@ -102,7 +100,7 @@ func (tx Transaction) Validate() error {
 		return common.GenericError{Msg: "sender address does not match with the public key of the signature"}
 	}
 
-	if !crypto.VerifySignature(txBodyHash, publicKeyBytes, signatureBytes) {
+	if !crypto.VerifySignature(txBodyBytes, publicKeyBytes, signatureBytes) {
 		return common.GenericError{Msg: "failed to verify signature"}
 	}
 

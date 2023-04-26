@@ -49,16 +49,16 @@ func SignData(data []byte, privateKey []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return eth.Sign(data, privateKeyECDSA)
+	return eth.Sign(HashData(data), privateKeyECDSA)
 }
 
 func PublicKeyFromSignature(data []byte, signature []byte) ([]byte, error) {
-	return eth.Ecrecover(data, signature)
+	return eth.Ecrecover(HashData(data), signature)
 }
 
 func VerifySignature(data []byte, publicKey []byte, signature []byte) bool {
 	signatureNoRecoverID := signature[:len(signature)-1] // remove recovery id
-	return eth.VerifySignature(publicKey, data, signatureNoRecoverID)
+	return eth.VerifySignature(publicKey, HashData(data), signatureNoRecoverID)
 }
 
 func AddressFromPublicKey(publicKey *ecdsa.PublicKey) []byte {

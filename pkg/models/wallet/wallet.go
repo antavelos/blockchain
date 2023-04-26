@@ -49,3 +49,7 @@ func (w Wallet) Sign(message []byte) (string, error) {
 func (w Wallet) AddressString() string {
 	return hex.EncodeToString(w.Address)
 }
+
+func (w Wallet) VerifySignature(data []byte, signature []byte) bool {
+	return crypto.VerifySignature(data, w.PublicKey, signature)
+}

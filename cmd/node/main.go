@@ -160,7 +160,6 @@ func initNode() error {
 		return common.GenericError{Msg: "retrieve DNS nodes error", Extra: err}
 	}
 
-	// TODO: check if this step can be included in other calls
 	err = pingNodes()
 	if err != nil {
 		common.LogError("ping nodes error", err.Error())
