@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
 	node_client "github.com/antavelos/blockchain/pkg/clients/node"
 	"github.com/antavelos/blockchain/pkg/common"
@@ -22,14 +21,14 @@ func shareBlock(block bc.Block) error {
 
 	if responses.HasConnectionRefused() {
 		common.LogInfo("Refresing DNS nodes")
-		bus.Publish(RefreshDnsNodes, nil)
+		bus.Publish(RefreshDnsNodesTopic, nil)
 	}
 
 	if responses.ErrorsRatio() > 0 {
-		msg := fmt.Sprintf("new block was not accepted by some nodes: \n%v", strings.Join(responses.ErrorStrings(), "\n"))
+		msg := fmt.Sprintf("new block was not accepted by some nodes: %v", responses.Errors())
 		common.LogError(msg)
 
-		if responses.ErrorsRatio() > 0.5 {
+		if responses.ErrorsRatio() > 0.49 {
 			return common.GenericError{Msg: msg}
 		}
 	}

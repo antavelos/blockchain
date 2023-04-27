@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"net"
-	"strings"
 	"time"
 
 	dns_client "github.com/antavelos/blockchain/pkg/clients/dns"
@@ -220,12 +219,12 @@ func pingNodes() error {
 	responses := node_client.PingNodes(nodes, selfNode)
 
 	if responses.HasConnectionRefused() {
-		bus.Publish(RefreshDnsNodes, nil)
+		bus.Publish(RefreshDnsNodesTopic, nil)
 	}
 
 	if responses.ErrorsRatio() < 1 {
 		return common.GenericError{
-			Msg: fmt.Sprintf("failed to share the transaction with other nodes\n %v", strings.Join(responses.ErrorStrings(), "\n")),
+			Msg: fmt.Sprintf("failed to share the transaction with other nodes: %v", responses.Errors()),
 		}
 	}
 
@@ -276,23 +275,17 @@ func rewardSelf(rewardAmount float64) error {
 		},
 	}
 
-	bus.Publish(RewardTransaction, rewardTx)
+	bus.Publish(RewardTransactionTopic, rewardTx)
 
 	return nil
 }
 
-func resolveLongestBlockchain() error {
-	ndb := getNodeDb()
-
-	nodes, err := ndb.LoadNodes()
-	if err != nil {
-		return err
-	}
+func getBlockchains(nodes []nd.Node) []*bc.Blockchain {
 
 	responses := node_client.GetBlockchains(nodes)
 
 	if responses.HasConnectionRefused() {
-		bus.Publish(RefreshDnsNodes, nil)
+		bus.Publish(RefreshDnsNodesTopic, nil)
 	}
 
 	blockchains := common.Map(responses, func(response rest.Response) *bc.Blockchain {
@@ -307,6 +300,19 @@ func resolveLongestBlockchain() error {
 
 		return &blockchain
 	})
+
+	return blockchains
+}
+
+func resolveLongestBlockchain() error {
+	ndb := getNodeDb()
+
+	nodes, err := ndb.LoadNodes()
+	if err != nil {
+		return err
+	}
+
+	blockchains := getBlockchains(nodes)
 
 	bdb := getBlockchainDb()
 	localBlockchain, _ := bdb.LoadBlockchain()

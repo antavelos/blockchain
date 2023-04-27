@@ -44,14 +44,6 @@ func PostHttpData(url string, data []byte) ([]byte, error) {
 	return handleResponse(resp)
 }
 
-type Marshaller interface {
-	Unmarshal([]byte) (any, error)
-}
-
-type ObjectMarshaller struct {
-	Many bool
-}
-
 type Response struct {
 	Body []byte
 	Err  error
@@ -84,10 +76,12 @@ func (br BulkResponse) ErrorsRatio() float64 {
 	return float64(len(br.errorResponses())) / float64(len(br))
 }
 
-func (br BulkResponse) ErrorStrings() []string {
-	return common.Map(br.errorResponses(), func(r Response) string {
+func (br BulkResponse) Errors() string {
+	errorStrings := common.Map(br.errorResponses(), func(r Response) string {
 		return r.Err.Error()
 	})
+
+	return "\n" + strings.Join(errorStrings, "\n")
 }
 
 type Requester interface {
@@ -97,7 +91,6 @@ type Requester interface {
 type PostRequester struct {
 	URL  string
 	Body any
-	M    Marshaller
 }
 
 func (r PostRequester) Request() Response {
@@ -117,7 +110,6 @@ func (r PostRequester) Request() Response {
 
 type GetRequester struct {
 	URL string
-	M   Marshaller
 }
 
 func (r GetRequester) Request() Response {

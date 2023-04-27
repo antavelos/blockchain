@@ -72,7 +72,7 @@ func (db *BlockchainDB) SaveBlockchain(blockchain bc.Blockchain) error {
 	return write(db.Filename, blockchainBytes)
 }
 
-func (db *BlockchainDB) UpdateBlockchain(newBlockchain *bc.Blockchain) error {
+func (db *BlockchainDB) UpdateBlockchain(other *bc.Blockchain) error {
 
 	m := sync.Mutex{}
 
@@ -84,7 +84,7 @@ func (db *BlockchainDB) UpdateBlockchain(newBlockchain *bc.Blockchain) error {
 		return err
 	}
 
-	blockchain.Update(newBlockchain)
+	blockchain.Update(other)
 
 	return db.SaveBlockchain(*blockchain)
 }

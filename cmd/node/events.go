@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
 	node_client "github.com/antavelos/blockchain/pkg/clients/node"
 	"github.com/antavelos/blockchain/pkg/common"
@@ -11,9 +10,9 @@ import (
 )
 
 const (
-	ShareTransaction bus.Topic = iota
-	RewardTransaction
-	RefreshDnsNodes
+	ShareTransactionTopic bus.Topic = iota
+	RewardTransactionTopic
+	RefreshDnsNodesTopic
 )
 
 func shareTxHandler(event bus.DataEvent) {
@@ -23,7 +22,7 @@ func shareTxHandler(event bus.DataEvent) {
 	nodes, _ := ndb.LoadNodes()
 	responses := node_client.ShareTx(nodes, tx)
 	if responses.ErrorsRatio() > 0 {
-		common.LogError("Failed to share the transaction with some nodes", responses.ErrorStrings())
+		common.LogError("Failed to share the transaction with some nodes", responses.Errors())
 	}
 }
 
@@ -36,7 +35,7 @@ func rewardTxHandler(event bus.DataEvent) {
 	}
 }
 
-func refreshDnsNodesHAndler() {
+func refreshDnsNodesHandler() {
 	// TODO: to be called from dedicated module
 	err := retrieveDnsNodes()
 	if err != nil {
@@ -60,7 +59,7 @@ func reward(tx bc.Transaction) error {
 	responses := node_client.ShareTx(nodes, tx)
 	if responses.ErrorsRatio() > 0 {
 		return common.GenericError{
-			Msg: fmt.Sprintf("failed to share the transaction with other nodes\n %v", strings.Join(responses.ErrorStrings(), "\n")),
+			Msg: fmt.Sprintf("failed to share the transaction with other nodes: %v", responses.Errors()),
 		}
 	}
 
@@ -68,9 +67,9 @@ func reward(tx bc.Transaction) error {
 }
 
 func startEventLoop() {
-	shareTxChan := bus.Subscribe(ShareTransaction)
-	rewardChan := bus.Subscribe(RewardTransaction)
-	refreshDnsNodesChan := bus.Subscribe(RefreshDnsNodes)
+	shareTxChan := bus.Subscribe(ShareTransactionTopic)
+	rewardChan := bus.Subscribe(RewardTransactionTopic)
+	refreshDnsNodesChan := bus.Subscribe(RefreshDnsNodesTopic)
 
 	for {
 		select {
@@ -79,7 +78,7 @@ func startEventLoop() {
 		case rewardTx := <-*rewardChan:
 			go rewardTxHandler(rewardTx)
 		case <-*refreshDnsNodesChan:
-			go refreshDnsNodesHAndler()
+			go refreshDnsNodesHandler()
 		}
 	}
 }

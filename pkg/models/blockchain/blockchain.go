@@ -297,9 +297,9 @@ func (bc *Blockchain) lastBlock() Block {
 	return bc.Blocks[blocksNum-1]
 }
 
-func (bc *Blockchain) Update(newBlockchain *Blockchain) {
+func (bc *Blockchain) Update(other *Blockchain) {
 	// TODO: append the blocks diff
-	bc.Blocks = newBlockchain.Blocks
+	bc.Blocks = other.Blocks
 
 	// TODO: to refactor
 	for i := len(bc.Blocks) - 1; i > 0; i-- {

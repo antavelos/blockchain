@@ -18,11 +18,6 @@ func Unmarshal(data []byte) (wallet Wallet, err error) {
 	return
 }
 
-func UnmarshalMany(data []byte) (wallets []Wallet, err error) {
-	err = json.Unmarshal(data, &wallets)
-	return
-}
-
 func NewWallet() (*Wallet, error) {
 	privateKey, err := crypto.GeneratePrivateKey()
 	if err != nil {

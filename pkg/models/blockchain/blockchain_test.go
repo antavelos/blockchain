@@ -3,7 +3,6 @@ package blockchain
 import (
 	"encoding/hex"
 	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/antavelos/blockchain/pkg/models/wallet"

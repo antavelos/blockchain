@@ -70,7 +70,7 @@ func addTx(c *gin.Context) {
 		return
 	}
 
-	bus.Publish(ShareTransaction, tx)
+	bus.Publish(ShareTransactionTopic, tx)
 
 	c.IndentedJSON(http.StatusCreated, tx)
 }
