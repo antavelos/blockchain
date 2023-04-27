@@ -297,24 +297,18 @@ func (bc *Blockchain) lastBlock() Block {
 	return bc.Blocks[blocksNum-1]
 }
 
-func UpdateBlockchain(oldBlockchain *Blockchain, newBlockchain *Blockchain) *Blockchain {
-	if oldBlockchain == nil {
-		return newBlockchain
-	}
-
+func (bc *Blockchain) Update(newBlockchain *Blockchain) {
 	// TODO: append the blocks diff
-	oldBlockchain.Blocks = newBlockchain.Blocks
+	bc.Blocks = newBlockchain.Blocks
 
 	// TODO: to refactor
-	for i := len(oldBlockchain.Blocks) - 1; i > 0; i-- {
-		for _, tx := range oldBlockchain.TxPool {
-			if oldBlockchain.Blocks[i].HasTx(tx) {
-				oldBlockchain.removeTx(tx)
+	for i := len(bc.Blocks) - 1; i > 0; i-- {
+		for _, tx := range bc.TxPool {
+			if bc.Blocks[i].HasTx(tx) {
+				bc.removeTx(tx)
 			}
 		}
 	}
-
-	return oldBlockchain
 }
 
 func GetMaxLengthBlockchain(blockchains []*Blockchain) *Blockchain {

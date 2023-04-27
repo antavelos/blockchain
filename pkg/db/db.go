@@ -84,7 +84,7 @@ func (db *BlockchainDB) UpdateBlockchain(newBlockchain *bc.Blockchain) error {
 		return err
 	}
 
-	blockchain = bc.UpdateBlockchain(blockchain, newBlockchain)
+	blockchain.Update(newBlockchain)
 
 	return db.SaveBlockchain(*blockchain)
 }
