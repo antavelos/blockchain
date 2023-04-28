@@ -10,9 +10,9 @@ import (
 )
 
 func shareBlock(block bc.Block) error {
-	ndb := getNodeDb()
+	nrepo := getNodeRepo()
 
-	nodes, err := ndb.LoadNodes()
+	nodes, err := nrepo.GetNodes()
 	if err != nil {
 		return common.GenericError{Msg: "failed to share new block"}
 	}
@@ -46,9 +46,9 @@ func mine(block *bc.Block, difficulty int) {
 }
 
 func Mine() (bc.Block, error) {
-	bdb := getBlockchainDb()
+	brepo := getBlockchainRepo()
 
-	blockchain, err := bdb.LoadBlockchain()
+	blockchain, err := brepo.GetBlockchain()
 
 	if err != nil {
 		return bc.Block{}, common.GenericError{Msg: "blockchain currently not available"}
@@ -78,7 +78,7 @@ func Mine() (bc.Block, error) {
 		return bc.Block{}, err
 	}
 
-	err = bdb.SaveBlockchain(*blockchain)
+	err = brepo.ReplaceBlockchain(*blockchain)
 	if err != nil {
 		return bc.Block{}, common.GenericError{Msg: "failed to update blockchain"}
 	}

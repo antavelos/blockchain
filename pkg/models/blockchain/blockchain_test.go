@@ -8,6 +8,9 @@ import (
 	"github.com/antavelos/blockchain/pkg/models/wallet"
 )
 
+func TestSom(t *testing.T) {
+	t.Error(hex.EncodeToString([]byte("CMdSixU2dQJe0M9XCpyuM17fcyc=")))
+}
 func TestTransactionBody_getBalanceForAddress(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -115,74 +118,6 @@ func TestIsCoinbase(t *testing.T) {
 	}
 }
 
-// func TestTransaction_Validate(t *testing.T) {
-// 	type fields struct {
-// 		Body      *TransactionBody
-// 		Signature string
-// 	}
-// 	tests := []struct {
-// 		name    string
-// 		fields  fields
-// 		wantErr bool
-// 	}{
-// 		{
-// 			name: "valid transaction",
-// 			fields: fields{
-// 				Body: &TransactionBody{
-// 					Sender:    "sender",
-// 					Recipient: "recipient",
-// 					Amount:    100,
-// 				},
-// 				Signature: "a8d7e6b5c4",
-// 			},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name: "invalid transaction with invalid signature",
-// 			fields: fields{
-// 				Body: &TransactionBody{
-// 					Sender:    "sender",
-// 					Recipient: "recipient",
-// 					Amount:    100,
-// 				},
-// 				Signature: "invalid signature",
-// 			},
-// 			wantErr: true,
-// 		},
-// 		{
-// 			name: "invalid transaction with invalid sender address",
-// 			fields: fields{
-// 				Body: &TransactionBody{
-// 					Sender:    "invalid sender address",
-// 					Recipient: "recipient",
-// 					Amount:    100,
-// 				},
-// 				Signature: "a8d7e6b5c4",
-// 			},
-// 			wantErr: true,
-// 		},
-// 		{
-// 			name: "invalid transaction with invalid body",
-// 			fields: fields{
-// 				Body:      nil,
-// 				Signature: "a8d7e6b5c4",
-// 			},
-// 			wantErr: true,
-// 		},
-// 	}
-
-//		for _, tt := range tests {
-//			t.Run(tt.name, func(t *testing.T) {
-//				tx := Transaction{
-//					Body:      *tt.fields.Body,
-//					Signature: tt.fields.Signature,
-//				}
-//				if err := tx.Validate(); (err != nil) != tt.wantErr {
-//					t.Errorf("Transaction.Validate() error = %v, wantErr %v", err, tt.wantErr)
-//				}
-//			})
-//		}
-//	}
 func TestHasTx(t *testing.T) {
 	// Create a test block
 	block := &Block{

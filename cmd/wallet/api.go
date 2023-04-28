@@ -10,9 +10,9 @@ import (
 const NewWalletEndpoint = "/wallets/new"
 
 func apiNewWallet(c *gin.Context) {
-	wdb := getWalletDb()
+	wrepo := getWalletRepo()
 
-	wallet, err := wdb.CreateWallet()
+	wallet, err := wrepo.CreateWallet()
 	if err != nil {
 		common.LogError("New wallet [FAIL]", err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "failed to create new wallet"})

@@ -12,9 +12,9 @@ import (
 const nodesURI = "/nodes"
 
 func getNodes(c *gin.Context) {
-	ndb := getNodeDb()
+	nrepo := getNodeRepo()
 
-	nodes, err := ndb.LoadNodes()
+	nodes, err := nrepo.GetNodes()
 	if err != nil {
 		common.LogError("nodes not available", err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "nodes not available"})
@@ -25,7 +25,7 @@ func getNodes(c *gin.Context) {
 }
 
 func addNode(c *gin.Context) {
-	ndb := getNodeDb()
+	nrepo := getNodeRepo()
 
 	var node nd.Node
 	if err := c.BindJSON(&node); err != nil {
@@ -34,7 +34,7 @@ func addNode(c *gin.Context) {
 		return
 	}
 
-	err := ndb.AddNode(node)
+	err := nrepo.AddNode(node)
 	if err != nil {
 		common.LogError("failed to add node", err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, err.Error())

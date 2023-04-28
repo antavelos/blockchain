@@ -10,7 +10,6 @@ import (
 	"github.com/antavelos/blockchain/pkg/common"
 	"github.com/antavelos/blockchain/pkg/lib/crypto"
 	"github.com/antavelos/blockchain/pkg/models/wallet"
-	"github.com/google/uuid"
 )
 
 type TransactionBody struct {
@@ -202,13 +201,6 @@ func (bc *Blockchain) AddTx(tx Transaction) (Transaction, error) {
 		return Transaction{}, common.GenericError{Msg: "sender has not sufficient funds"}
 	}
 
-	if tx.Id == "" {
-		tx.Id = uuid.NewString()
-	}
-
-	if tx.Timestamp == 0 {
-		tx.Timestamp = time.Now().UnixMilli()
-	}
 	bc.TxPool = append(bc.TxPool, tx)
 
 	return tx, nil

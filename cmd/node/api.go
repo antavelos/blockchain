@@ -25,7 +25,8 @@ func addSharedBlock(c *gin.Context) {
 		return
 	}
 
-	block, err := ioAddBlock(block)
+	brepo := getBlockchainRepo()
+	err := brepo.AddBlock(block)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -42,7 +43,8 @@ func addSharedTx(c *gin.Context) {
 		return
 	}
 
-	tx, err := ioAddTx(tx)
+	brepo := getBlockchainRepo()
+	tx, err := brepo.AddTx(tx)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -64,7 +66,8 @@ func addTx(c *gin.Context) {
 		return
 	}
 
-	tx, err := ioAddTx(tx)
+	brepo := getBlockchainRepo()
+	tx, err := brepo.AddTx(tx)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -76,9 +79,9 @@ func addTx(c *gin.Context) {
 }
 
 func getBlockchain(c *gin.Context) {
-	bdb := getBlockchainDb()
+	brepo := getBlockchainRepo()
 
-	blockchain, err := bdb.LoadBlockchain()
+	blockchain, err := brepo.GetBlockchain()
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "blockchain currently not available"})
 		return
@@ -88,7 +91,7 @@ func getBlockchain(c *gin.Context) {
 }
 
 func ping(c *gin.Context) {
-	ndb := getNodeDb()
+	nrepo := getNodeRepo()
 
 	var node nd.Node
 	if err := c.BindJSON(&node); err != nil {
@@ -97,14 +100,14 @@ func ping(c *gin.Context) {
 	}
 	common.LogInfo("Ping from", node.GetHost())
 
-	err := ndb.AddNode(node)
+	err := nrepo.AddNode(node)
 	if err != nil {
 		common.LogError(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	nodes, err := ndb.LoadNodes()
+	nodes, err := nrepo.GetNodes()
 	if err != nil {
 		common.LogError(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

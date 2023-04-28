@@ -39,3 +39,24 @@ func UnmarshalMany(data []byte) (nodes []Node, err error) {
 	err = json.Unmarshal(data, &nodes)
 	return
 }
+
+func AddNode(nodes []Node, newNode Node) ([]Node, error) {
+
+	index := containsNode(nodes, newNode)
+	if index == -1 {
+		nodes = append(nodes, newNode)
+	} else {
+		nodes[index].Update(newNode)
+	}
+
+	return nodes, nil
+}
+
+func containsNode(nodes []Node, node Node) int {
+	for i, n := range nodes {
+		if n.Name == node.Name {
+			return i
+		}
+	}
+	return -1
+}

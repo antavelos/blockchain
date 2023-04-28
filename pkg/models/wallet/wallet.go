@@ -18,6 +18,11 @@ func Unmarshal(data []byte) (wallet Wallet, err error) {
 	return
 }
 
+func UnmarshalMany(data []byte) (wallets []Wallet, err error) {
+	err = json.Unmarshal(data, &wallets)
+	return
+}
+
 func NewWallet() (*Wallet, error) {
 	privateKey, err := crypto.GeneratePrivateKey()
 	if err != nil {
@@ -33,6 +38,10 @@ func NewWallet() (*Wallet, error) {
 		PrivateKey: crypto.MarshalPrivateKey(privateKey),
 		PublicKey:  crypto.MarshalPublicKey(publicKey),
 	}, nil
+}
+
+func AddWallet(wallets []Wallet, wallet Wallet) ([]Wallet, error) {
+	return append(wallets, wallet), nil
 }
 
 func (w Wallet) Sign(message []byte) (string, error) {

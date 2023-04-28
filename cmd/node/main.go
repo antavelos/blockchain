@@ -9,6 +9,7 @@ import (
 	dns_client "github.com/antavelos/blockchain/pkg/clients/dns"
 	node_client "github.com/antavelos/blockchain/pkg/clients/node"
 	wallet_client "github.com/antavelos/blockchain/pkg/clients/wallet"
+
 	"github.com/antavelos/blockchain/pkg/common"
 	"github.com/antavelos/blockchain/pkg/db"
 	"github.com/antavelos/blockchain/pkg/lib/bus"
@@ -16,6 +17,9 @@ import (
 	"github.com/antavelos/blockchain/pkg/lib/rest"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 	nd "github.com/antavelos/blockchain/pkg/models/node"
+	bc_repo "github.com/antavelos/blockchain/pkg/repo/blockchain"
+	node_repo "github.com/antavelos/blockchain/pkg/repo/node"
+	wallet_repo "github.com/antavelos/blockchain/pkg/repo/wallet"
 )
 
 const coinBaseSenderAddress = "0"
@@ -40,29 +44,41 @@ var envVars []string = []string{
 	"NODE_NAME",
 }
 
-var _nodeDB *db.NodeDB
-var _blockchainDB *db.BlockchainDB
-var _walletsDB *db.WalletDB
+var _nodeDB *db.DB
+var _blockchainDB *db.DB
+var _walletsDB *db.DB
 
-func getNodeDb() *db.NodeDB {
+func getWalletDb() *db.DB {
+	if _walletsDB == nil {
+		_walletsDB = db.NewDB(config["WALLETS_FILENAME"])
+	}
+	return _walletsDB
+}
+
+func getNodeDb() *db.DB {
 	if _nodeDB == nil {
-		_nodeDB = db.GetNodeDb(config["NODES_FILENAME"])
+		_nodeDB = db.NewDB(config["NODES_FILENAME"])
 	}
 	return _nodeDB
 }
 
-func getBlockchainDb() *db.BlockchainDB {
+func getBlockchainDb() *db.DB {
 	if _blockchainDB == nil {
-		_blockchainDB = db.GetBlockchainDb(config["BLOCKCHAIN_FILENAME"])
+		_blockchainDB = db.NewDB(config["BLOCKCHAIN_FILENAME"])
 	}
 	return _blockchainDB
 }
 
-func getWalletDb() *db.WalletDB {
-	if _walletsDB == nil {
-		_walletsDB = db.GetWalletDb(config["WALLETS_FILENAME"])
-	}
-	return _walletsDB
+func getBlockchainRepo() *bc_repo.BlockchainRepo {
+	return bc_repo.NewBlockchainRepo(getBlockchainDb())
+}
+
+func getNodeRepo() *node_repo.NodeRepo {
+	return node_repo.NewNodeRepo(getNodeDb())
+}
+
+func getWalletRepo() *wallet_repo.WalletRepo {
+	return wallet_repo.NewWalletRepo(getWalletDb())
 }
 
 func getMiningDifficulty() int {
@@ -91,7 +107,10 @@ func main() {
 	}
 
 	if *init {
-		ioNewBlockchain()
+		brepo := getBlockchainRepo()
+		if _, err := brepo.CreateBlockchain(); err != nil {
+			common.LogFatal("failed to create blockchain", err.Error())
+		}
 	}
 
 	err = initNode()
@@ -195,18 +214,20 @@ func retrieveDnsNodes() error {
 		return n.Name != config["NODE_NAME"]
 	})
 
-	ndb := getNodeDb()
-	if err := ndb.SaveNodes(nodes); err != nil {
-		return common.GenericError{Msg: "couldn't save nodes received from DNS", Extra: err}
+	nrepo := getNodeRepo()
+	for _, node := range nodes {
+		if err := nrepo.AddNode(node); err != nil {
+			return common.GenericError{Msg: "couldn't save nodes received from DNS", Extra: err}
+		}
 	}
 
 	return nil
 }
 
 func pingNodes() error {
-	ndb := getNodeDb()
+	nrepo := getNodeRepo()
 
-	nodes, err := ndb.LoadNodes()
+	nodes, err := nrepo.GetNodes()
 	if err != nil {
 		return common.GenericError{Msg: "couldn't load nodes", Extra: err}
 	}
@@ -262,11 +283,13 @@ func runMiningLoop() {
 }
 
 func rewardSelf(rewardAmount float64) error {
-	wallet, err := ioGetWallet()
+	walletRepo := getWalletRepo()
+	wallets, err := walletRepo.GetWallets()
 	if err != nil {
 		return err
 	}
 
+	wallet := wallets[0]
 	rewardTx := bc.Transaction{
 		Body: bc.TransactionBody{
 			Sender:    coinBaseSenderAddress,
@@ -288,11 +311,11 @@ func getBlockchains(nodes []nd.Node) []*bc.Blockchain {
 		bus.Publish(RefreshDnsNodesTopic, nil)
 	}
 
-	blockchains := common.Map(responses, func(response rest.Response) *bc.Blockchain {
-		if response.Err != nil {
-			return &bc.Blockchain{}
-		}
+	noErrorResponses := common.Filter(responses, func(response rest.Response) bool {
+		return response.Err == nil
+	})
 
+	blockchains := common.Map(noErrorResponses, func(response rest.Response) *bc.Blockchain {
 		blockchain, err := bc.UnmarshalBlockchain(response.Body)
 		if err != nil {
 			return &bc.Blockchain{}
@@ -305,17 +328,20 @@ func getBlockchains(nodes []nd.Node) []*bc.Blockchain {
 }
 
 func resolveLongestBlockchain() error {
-	ndb := getNodeDb()
+	nrepo := getNodeRepo()
 
-	nodes, err := ndb.LoadNodes()
+	nodes, err := nrepo.GetNodes()
 	if err != nil {
 		return err
 	}
 
-	blockchains := getBlockchains(nodes)
+	// TODO: include the below in a single lock
 
-	bdb := getBlockchainDb()
-	localBlockchain, _ := bdb.LoadBlockchain()
+	blockchains := getBlockchains(nodes)
+	common.LogInfo("Retrieved blockchains", len(blockchains))
+
+	brepo := getBlockchainRepo()
+	localBlockchain, _ := brepo.GetBlockchain()
 	blockchains = append(blockchains, localBlockchain)
 
 	maxLengthBlockchain := bc.GetMaxLengthBlockchain(blockchains)
@@ -324,7 +350,7 @@ func resolveLongestBlockchain() error {
 		return nil
 	}
 
-	err = bdb.UpdateBlockchain(maxLengthBlockchain)
+	err = brepo.UpdateBlockchain(maxLengthBlockchain)
 	if err != nil {
 		return common.GenericError{Msg: "failed to update local blockchain", Extra: err}
 	}
@@ -333,9 +359,9 @@ func resolveLongestBlockchain() error {
 }
 
 func hasWallet() bool {
-	wdb := getWalletDb()
+	wrepo := getWalletRepo()
 
-	return !wdb.IsEmpty()
+	return !wrepo.IsEmpty()
 }
 
 func createNewWallet() error {
@@ -344,6 +370,6 @@ func createNewWallet() error {
 		return err
 	}
 
-	wdb := getWalletDb()
-	return wdb.SaveWallet(wallet)
+	wrepo := getWalletRepo()
+	return wrepo.AddWallet(wallet)
 }

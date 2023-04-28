@@ -18,8 +18,8 @@ const (
 func shareTxHandler(event bus.DataEvent) {
 	tx := event.Data.(bc.Transaction)
 
-	ndb := getNodeDb()
-	nodes, _ := ndb.LoadNodes()
+	nrepo := getNodeRepo()
+	nodes, _ := nrepo.GetNodes()
 	responses := node_client.ShareTx(nodes, tx)
 	if responses.ErrorsRatio() > 0 {
 		common.LogError("Failed to share the transaction with some nodes", responses.Errors())
@@ -45,13 +45,14 @@ func refreshDnsNodesHandler() {
 
 func reward(tx bc.Transaction) error {
 
-	tx, err := ioAddTx(tx)
+	brepo := getBlockchainRepo()
+	tx, err := brepo.AddTx(tx)
 	if err != nil {
 		return common.GenericError{Msg: "failed to add reward transaction", Extra: err}
 	}
 
-	ndb := getNodeDb()
-	nodes, err := ndb.LoadNodes()
+	nrepo := getNodeRepo()
+	nodes, _ := nrepo.GetNodes()
 	if err != nil {
 		return common.GenericError{Msg: "failed to load nodes", Extra: err}
 	}

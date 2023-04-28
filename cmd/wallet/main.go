@@ -13,6 +13,7 @@ import (
 	cfg "github.com/antavelos/blockchain/pkg/lib/config"
 	bc "github.com/antavelos/blockchain/pkg/models/blockchain"
 	w "github.com/antavelos/blockchain/pkg/models/wallet"
+	repo "github.com/antavelos/blockchain/pkg/repo/wallet"
 )
 
 const defaultWalletCreationIntervalInSec = 300
@@ -28,20 +29,25 @@ var envVars []string = []string{
 	"DNS_PORT",
 }
 
-var _walletsDB *db.WalletDB
+var _db *db.DB
+var _walletRepo *repo.WalletRepo
 
-func getWalletDb() *db.WalletDB {
-	if _walletsDB == nil {
-		_walletsDB = db.GetWalletDb(config["WALLETS_FILENAME"])
+func getDB() *db.DB {
+	if _db == nil {
+		_db = db.NewDB(config["WALLETS_FILENAME"])
 	}
-	return _walletsDB
+	return _db
+}
+
+func getWalletRepo() *repo.WalletRepo {
+	return repo.NewWalletRepo(getDB())
 }
 
 func getWallerCreationIntervalInSec() int {
 	return config.GetValueAtoi("WALLET_CREATION_INTERVAL_IN_SEC", defaultWalletCreationIntervalInSec)
 }
 
-func getDefaultTransactionCreationIntervalInSec() int {
+func getTransactionCreationIntervalInSec() int {
 	return config.GetValueAtoi("TRANSACTION_CREATION_INTERVAL_IN_SEC", defaultTransactionCreationIntervalInSec)
 }
 
@@ -69,14 +75,16 @@ func runServer() {
 }
 
 func runSimulation() {
-	wdb := getWalletDb()
+	wrepo := getWalletRepo()
 	walletCreationIntervalInSec := getWallerCreationIntervalInSec()
-	txCreationIntervalInSec := getDefaultTransactionCreationIntervalInSec()
+	txCreationIntervalInSec := getTransactionCreationIntervalInSec()
 
 	i := 0
 	for {
+		time.Sleep(1 * time.Second)
+		fmt.Print(i)
 		if i%walletCreationIntervalInSec == 0 {
-			w, err := wdb.CreateWallet()
+			w, err := wrepo.CreateWallet()
 			if err != nil {
 				common.LogError("New wallet [FAIL]", err.Error())
 			} else {
@@ -100,17 +108,16 @@ func runSimulation() {
 			}
 		}
 
-		time.Sleep(1 * time.Second)
 		i = i + 1
 	}
 }
 
 func getRandomWallets() ([]w.Wallet, error) {
-	wdb := getWalletDb()
+	wrepo := getWalletRepo()
 
-	wallets, err := wdb.LoadWallets()
+	wallets, err := wrepo.GetWallets()
 	if err != nil {
-		return nil, common.GenericError{Msg: "failed to load wallets"}
+		return nil, common.GenericError{Msg: "failed to load wallets", Extra: err}
 	}
 
 	lenWallets := len(wallets)

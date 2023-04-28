@@ -6,6 +6,7 @@ import (
 	"github.com/antavelos/blockchain/pkg/common"
 	"github.com/antavelos/blockchain/pkg/db"
 	cfg "github.com/antavelos/blockchain/pkg/lib/config"
+	repo "github.com/antavelos/blockchain/pkg/repo/node"
 )
 
 var config cfg.Config
@@ -14,13 +15,17 @@ var envVars []string = []string{
 	"NODES_FILENAME",
 }
 
-var _nodeDB *db.NodeDB
+var _db *db.DB
 
-func getNodeDb() *db.NodeDB {
-	if _nodeDB == nil {
-		_nodeDB = db.GetNodeDb(config["NODES_FILENAME"])
+func getDB() *db.DB {
+	if _db == nil {
+		_db = db.NewDB(config["NODES_FILENAME"])
 	}
-	return _nodeDB
+	return _db
+}
+
+func getNodeRepo() *repo.NodeRepo {
+	return repo.NewNodeRepo(getDB())
 }
 
 func main() {
