@@ -11,7 +11,7 @@ services:
       - NODES_FILENAME=/data/dns_nodes.json
     volumes:
       - ./data/dns_nodes.json:/data/dns_nodes.json
-    command: /app/cmd/dns/dns
+    command: /app/internal/cmd/dns/dns
     networks:
       - blockchain
 
@@ -32,7 +32,7 @@ services:
       - ./data/blockchain_1.json:/data/blockchain.json
       - ./data/nodes_1.json:/data/nodes.json
       - ./data/wallet_1.json:/data/wallet.json
-    command: /app/cmd/node/node
+    command: /app/internal/cmd/node/node
     networks:
       - blockchain
 
@@ -54,7 +54,7 @@ services:
       - ./data/blockchain_2.json:/data/blockchain.json
       - ./data/nodes_2.json:/data/nodes.json
       - ./data/wallet_2.json:/data/wallet.json
-    command: /app/cmd/node/node
+    command: /app/internal/cmd/node/node
     networks:
       - blockchain
 
@@ -76,7 +76,7 @@ services:
       - ./data/blockchain_3.json:/data/blockchain.json
       - ./data/nodes_3.json:/data/nodes.json
       - ./data/wallet_3.json:/data/wallet.json
-    command: /app/cmd/node/node -mine
+    command: /app/internal/cmd/node/node -mine
     networks:
       - blockchain
 
@@ -98,7 +98,7 @@ services:
       - ./data/blockchain_4.json:/data/blockchain.json
       - ./data/nodes_4.json:/data/nodes.json
       - ./data/wallet_4.json:/data/wallet.json
-    command: /app/cmd/node/node -mine
+    command: /app/internal/cmd/node/node -mine
     networks:
       - blockchain
 
@@ -120,7 +120,7 @@ services:
       - ./data/blockchain_5.json:/data/blockchain.json
       - ./data/nodes_5.json:/data/nodes.json
       - ./data/wallet_5.json:/data/wallet.json
-    command: /app/cmd/node/node -mine
+    command: /app/internal/cmd/node/node -mine
     networks:
       - blockchain
 
@@ -140,7 +140,7 @@ services:
       - TRANSACTION_CREATION_INTERVAL_IN_SEC=2
     volumes:
       - ./data/wallets.json:/data/wallets.json
-    command: /app/cmd/wallet/wallet -simulate
+    command: /app/internal/cmd/wallet/wallet -simulate
     networks:
       - blockchain
 
@@ -155,7 +155,7 @@ services:
       - PORT=5000
       - DNS_HOST=dns
       - DNS_PORT=3000
-    command: /app/cmd/admin/admin
+    command: /app/internal/cmd/admin/admin
     networks:
       - blockchain
 

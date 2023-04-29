@@ -18,10 +18,10 @@ vendor/
 data/
 
 # executables
-cmd/dns/dns
-cmd/node/node
-cmd/wallet/wallet
-cmd/admin/admin
+src/internal/cmd/dns/dns
+src/internal/cmd/node/node
+src/internal/cmd/wallet/wallet
+src/internal/cmd/admin/admin
 
 # misc
 TODO.md
