@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net"
 	"os"
 	"time"
 )
@@ -99,4 +100,21 @@ func GetRandomFloat(min, max float64) float64 {
 	rand.Seed(time.Now().UnixNano())
 
 	return min + rand.Float64()*(max-min)
+}
+
+func GetSelfIP() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", GenericError{Msg: "IP not found", Extra: err}
+	}
+
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String(), nil
+			}
+		}
+	}
+
+	return "", GenericError{Msg: "IP not found"}
 }
