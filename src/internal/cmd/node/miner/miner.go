@@ -39,7 +39,7 @@ func (h *MineHandler) shareBlock(block bc.Block) error {
 
 	if responses.HasConnectionRefused() {
 		utils.LogInfo("Refresing DNS nodes")
-		h.Bus.Handle(eventbus.DataEvent{Ev: events.ConnectionRefusedEvent})
+		h.Bus.Handle(events.ConnectionRefusedEvent{})
 	}
 
 	if responses.ErrorsRatio() > 0 {
@@ -108,7 +108,7 @@ func (h *MineHandler) RunLoop() {
 
 		} else {
 			utils.LogInfo("New block [OK]", block.Idx)
-			h.Bus.Handle(eventbus.DataEvent{Ev: events.BlockMinedEvent})
+			h.Bus.Handle(events.BlockMinedEvent{})
 		}
 
 		time.Sleep(5 * time.Second)

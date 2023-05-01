@@ -82,7 +82,7 @@ func (h *RouteHandler) addTx(c *gin.Context) {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	h.Bus.Handle(eventbus.DataEvent{Ev: events.TransactionReceivedEvent, Data: tx})
+	h.Bus.Handle(events.TransactionReceivedEvent{Tx: tx})
 
 	c.IndentedJSON(http.StatusCreated, tx)
 }

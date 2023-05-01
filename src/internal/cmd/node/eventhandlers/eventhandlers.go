@@ -23,8 +23,8 @@ type EventHandler struct {
 	WalletRepo     *wallet_repo.WalletRepo
 }
 
-func (h EventHandler) HandleShareTx(event eventbus.DataEvent) {
-	tx := event.Data.(bc.Transaction)
+func (h EventHandler) HandleReceivedTransaction(event eventbus.Event) {
+	tx := event.Data().(bc.Transaction)
 
 	nodes, _ := h.NodeRepo.GetNodes()
 	responses := node_client.ShareTx(nodes, tx)
@@ -33,8 +33,7 @@ func (h EventHandler) HandleShareTx(event eventbus.DataEvent) {
 	}
 }
 
-func (h EventHandler) HandleRewardTx(event eventbus.DataEvent) {
-
+func (h EventHandler) HandleBlockMinedEvent(event eventbus.Event) {
 	rewardTx, err := h.makeRewardTx()
 	if err != nil {
 		utils.LogError("failed to create reward transaction", err.Error())
@@ -49,7 +48,7 @@ func (h EventHandler) HandleRewardTx(event eventbus.DataEvent) {
 	utils.LogInfo("rewarded self with", h.Config.DefaultRewardAmount)
 }
 
-func (h EventHandler) HandleRefreshDNSNodes(event eventbus.DataEvent) {
+func (h EventHandler) HandleConnectionRefusedEvent(event eventbus.Event) {
 	err := h.CommonHandler.RefreshDNSNodes()
 	if err != nil {
 		utils.LogError("failed to refresh DNS nodes", err.Error())
@@ -101,9 +100,10 @@ func NewEventBus(config *cfg.Config, com *common.CommonHandler, br *bc_repo.Bloc
 	eh := EventHandler{Config: config, CommonHandler: com, BlockchainRepo: br, NodeRepo: nr, WalletRepo: wr}
 
 	bus := eventbus.NewBus()
-	bus.RegisterEventHandler(events.TransactionReceivedEvent, eh.HandleShareTx)
-	bus.RegisterEventHandler(events.BlockMinedEvent, eh.HandleRewardTx)
-	bus.RegisterEventHandler(events.ConnectionRefusedEvent, eh.HandleRefreshDNSNodes)
+
+	bus.RegisterEventHandler(events.TransactionReceivedEvent{}.Name(), eh.HandleReceivedTransaction)
+	bus.RegisterEventHandler(events.BlockMinedEvent{}.Name(), eh.HandleBlockMinedEvent)
+	bus.RegisterEventHandler(events.ConnectionRefusedEvent{}.Name(), eh.HandleConnectionRefusedEvent)
 
 	return bus
 }

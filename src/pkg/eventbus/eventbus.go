@@ -2,14 +2,17 @@ package eventbus
 
 import "github.com/antavelos/blockchain/src/pkg/utils"
 
-type Event int
-
-type DataEvent struct {
-	Ev   Event
-	Data any
+type Event interface {
+	Name() string
+	Data() any
 }
 
-type EventHandlers map[Event]func(DataEvent)
+// type DataEvent struct {
+// 	Ev   Event
+// 	Data any
+// }
+
+type EventHandlers map[string]func(Event)
 
 type Bus struct {
 	handlers EventHandlers
@@ -19,15 +22,15 @@ func NewBus() *Bus {
 	return &Bus{handlers: make(EventHandlers)}
 }
 
-func (b *Bus) RegisterEventHandler(ev Event, handler func(DataEvent)) {
-	b.handlers[ev] = handler
+func (b *Bus) RegisterEventHandler(event string, handler func(Event)) {
+	b.handlers[event] = handler
 }
 
-func (b *Bus) Handle(de DataEvent) {
-	handler, ok := b.handlers[de.Ev]
+func (b *Bus) Handle(event Event) {
+	handler, ok := b.handlers[event.Name()]
 	if !ok {
 		utils.LogError("event handler not available")
 	}
 
-	go handler(de)
+	go handler(event)
 }
