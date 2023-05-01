@@ -108,37 +108,9 @@ func (h *MineHandler) RunLoop() {
 
 		} else {
 			utils.LogInfo("New block [OK]", block.Idx)
-
-			// TODO: check who should do the reward
-			//
-			err := h.rewardSelf(h.Config.DefaultRewardAmount)
-			if err != nil {
-				utils.LogError("failed to create reward transaction", err.Error())
-			} else {
-				utils.LogInfo("rewarded self with", h.Config.DefaultRewardAmount)
-			}
+			h.Bus.Handle(eventbus.DataEvent{Ev: events.BlockMinedEvent})
 		}
 
 		time.Sleep(5 * time.Second)
 	}
-}
-
-func (h *MineHandler) rewardSelf(rewardAmount float64) error {
-	// TODO: move the transaction creation in the handler
-	wallets, err := h.WalletRepo.GetWallets()
-	if err != nil {
-		return err
-	}
-
-	wallet := wallets[0]
-	rewardTx := bc.Transaction{
-		Body: bc.TransactionBody{
-			Sender:    h.Config.CoinBaseSenderAddress,
-			Recipient: wallet.AddressString(),
-			Amount:    rewardAmount,
-		},
-	}
-	h.Bus.Handle(eventbus.DataEvent{Ev: events.BlockMinedEvent, Data: rewardTx})
-
-	return nil
 }

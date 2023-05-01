@@ -32,7 +32,7 @@ func main() {
 	walletRepo := wallet_repo.NewWalletRepo(db.NewDB(config.Get("WALLETS_FILENAME")))
 
 	commonHandler := common.NewCommonHandler(config, blockchainRepo, nodeRepo, walletRepo)
-	bus := eventhandlers.NewEventBus(commonHandler, blockchainRepo, nodeRepo)
+	bus := eventhandlers.NewEventBus(config, commonHandler, blockchainRepo, nodeRepo, walletRepo)
 
 	if *init {
 		if _, err := blockchainRepo.CreateBlockchain(); err != nil {

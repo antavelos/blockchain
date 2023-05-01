@@ -9,7 +9,13 @@ import (
 )
 
 func TestSom(t *testing.T) {
-	t.Error(hex.EncodeToString([]byte("CMdSixU2dQJe0M9XCpyuM17fcyc=")))
+	t.Error(hex.EncodeToString([]byte("hSUUMYXE4wSdMfoDvsys6T2B5CI=")))
+	t.Error(hex.EncodeToString([]byte("4Q2Z9Q8rZ8j5CVl8XSngFnSJ/P4=")))
+	t.Error(hex.EncodeToString([]byte("1nKzvvZu4akbKbvmxNZ65FMfPI4=")))
+	t.Error(hex.EncodeToString([]byte("F3yPZJAI0nZuSAdnPAMLcKsiWzs=")))
+	t.Error(hex.EncodeToString([]byte("NMqBcbOBjg1w9a80Cl5/B5oSUKw=")))
+	t.Error(hex.EncodeToString([]byte("ANGjac8hpWh1d3GpxlOJu3y1dxc=")))
+	t.Error(hex.EncodeToString([]byte("KfX33nRaHA9Hodo5Ex7gQLpjdiE=")))
 }
 func TestTransactionBody_getBalanceForAddress(t *testing.T) {
 	testCases := []struct {
