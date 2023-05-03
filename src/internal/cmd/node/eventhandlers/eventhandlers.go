@@ -10,20 +10,16 @@ import (
 	wallet_client "github.com/antavelos/blockchain/src/internal/pkg/clients/wallet"
 	bc "github.com/antavelos/blockchain/src/internal/pkg/models/blockchain"
 	nd "github.com/antavelos/blockchain/src/internal/pkg/models/node"
-	bc_repo "github.com/antavelos/blockchain/src/internal/pkg/repos/blockchain"
-	node_repo "github.com/antavelos/blockchain/src/internal/pkg/repos/node"
-	wallet_repo "github.com/antavelos/blockchain/src/internal/pkg/repos/wallet"
+	rep "github.com/antavelos/blockchain/src/internal/pkg/repos"
 	"github.com/antavelos/blockchain/src/pkg/eventbus"
 	"github.com/antavelos/blockchain/src/pkg/rest"
 	"github.com/antavelos/blockchain/src/pkg/utils"
 )
 
 type EventHandler struct {
-	Bus            *eventbus.Bus
-	Config         *cfg.Config
-	BlockchainRepo *bc_repo.BlockchainRepo
-	NodeRepo       *node_repo.NodeRepo
-	WalletRepo     *wallet_repo.WalletRepo
+	Bus    *eventbus.Bus
+	Config *cfg.Config
+	Repos  *rep.Repos
 }
 
 func getUrl(host string, port string) string {
@@ -72,7 +68,7 @@ func (h EventHandler) initNode() error {
 
 	h.resolveLongestBlockchain()
 
-	if h.WalletRepo.IsEmpty() {
+	if h.Repos.WalletRepo.IsEmpty() {
 		if err := h.createNewWallet(); err != nil {
 			return utils.GenericError{Msg: "failed to create new wallet", Extra: err}
 		}
@@ -101,7 +97,7 @@ func (h EventHandler) refreshDNSNodes() error {
 	})
 
 	for _, node := range nodes {
-		if err := h.NodeRepo.AddNode(node); err != nil {
+		if err := h.Repos.NodeRepo.AddNode(node); err != nil {
 			return utils.GenericError{Msg: "couldn't save nodes received from DNS", Extra: err}
 		}
 	}
@@ -110,7 +106,7 @@ func (h EventHandler) refreshDNSNodes() error {
 }
 
 func (h EventHandler) pingNodes() error {
-	nodes, err := h.NodeRepo.GetNodes()
+	nodes, err := h.Repos.NodeRepo.GetNodes()
 	if err != nil {
 		return utils.GenericError{Msg: "couldn't load nodes", Extra: err}
 	}
@@ -160,7 +156,7 @@ func (h EventHandler) getBlockchains(nodes []nd.Node) []*bc.Blockchain {
 }
 
 func (h EventHandler) resolveLongestBlockchain() error {
-	nodes, err := h.NodeRepo.GetNodes()
+	nodes, err := h.Repos.NodeRepo.GetNodes()
 	if err != nil {
 		return err
 	}
@@ -170,7 +166,7 @@ func (h EventHandler) resolveLongestBlockchain() error {
 	blockchains := h.getBlockchains(nodes)
 	utils.LogInfo("Retrieved blockchains", len(blockchains))
 
-	localBlockchain, _ := h.BlockchainRepo.GetBlockchain()
+	localBlockchain, _ := h.Repos.BlockchainRepo.GetBlockchain()
 	blockchains = append(blockchains, localBlockchain)
 
 	maxLengthBlockchain := bc.GetMaxLengthBlockchain(blockchains)
@@ -179,7 +175,7 @@ func (h EventHandler) resolveLongestBlockchain() error {
 		return nil
 	}
 
-	err = h.BlockchainRepo.UpdateBlockchain(maxLengthBlockchain)
+	err = h.Repos.BlockchainRepo.UpdateBlockchain(maxLengthBlockchain)
 	if err != nil {
 		return utils.GenericError{Msg: "failed to update local blockchain", Extra: err}
 	}
@@ -193,13 +189,13 @@ func (h EventHandler) createNewWallet() error {
 		return err
 	}
 
-	return h.WalletRepo.AddWallet(wallet)
+	return h.Repos.WalletRepo.AddWallet(wallet)
 }
 
 func (h EventHandler) HandleTransactionReceivedEvent(event eventbus.DataEvent) {
 	tx := event.Data.(bc.Transaction)
 
-	nodes, _ := h.NodeRepo.GetNodes()
+	nodes, _ := h.Repos.NodeRepo.GetNodes()
 	responses := node_client.ShareTx(nodes, tx)
 	if responses.ErrorsRatio() > 0 {
 		utils.LogError("Failed to share the transaction with some nodes", responses.Errors())
@@ -231,11 +227,11 @@ func (h EventHandler) HandleBlockMiningFailedEvent(event eventbus.DataEvent) {
 }
 
 func (h EventHandler) makeRewardTx() (bc.Transaction, error) {
-	if h.WalletRepo.IsEmpty() {
+	if h.Repos.WalletRepo.IsEmpty() {
 		return bc.Transaction{}, utils.GenericError{Msg: "node has no wallet"}
 	}
 
-	wallets, err := h.WalletRepo.GetWallets()
+	wallets, err := h.Repos.WalletRepo.GetWallets()
 	if err != nil {
 		return bc.Transaction{}, utils.GenericError{Msg: "failed to get wallets", Extra: err}
 	}
@@ -251,12 +247,12 @@ func (h EventHandler) makeRewardTx() (bc.Transaction, error) {
 
 func (h EventHandler) reward(tx bc.Transaction) error {
 
-	tx, err := h.BlockchainRepo.AddTx(tx)
+	tx, err := h.Repos.BlockchainRepo.AddTx(tx)
 	if err != nil {
 		return utils.GenericError{Msg: "failed to add reward transaction", Extra: err}
 	}
 
-	nodes, _ := h.NodeRepo.GetNodes()
+	nodes, _ := h.Repos.NodeRepo.GetNodes()
 	if err != nil {
 		return utils.GenericError{Msg: "failed to load nodes", Extra: err}
 	}
@@ -279,10 +275,10 @@ func (h EventHandler) HandleConnectionRefusedEvent(event eventbus.DataEvent) {
 	}
 }
 
-func NewEventBus(config *cfg.Config, br *bc_repo.BlockchainRepo, nr *node_repo.NodeRepo, wr *wallet_repo.WalletRepo) *eventbus.Bus {
+func NewEventBus(config *cfg.Config, repos *rep.Repos) *eventbus.Bus {
 	bus := eventbus.NewBus()
 
-	eh := EventHandler{Bus: bus, Config: config, BlockchainRepo: br, NodeRepo: nr, WalletRepo: wr}
+	eh := EventHandler{Bus: bus, Config: config, Repos: repos}
 
 	bus.RegisterEventHandler(events.InitNodeEvent, eh.HandleInitNode)
 	bus.RegisterEventHandler(events.TransactionReceivedEvent, eh.HandleTransactionReceivedEvent)

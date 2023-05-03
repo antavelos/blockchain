@@ -10,7 +10,7 @@ import (
 	node_client "github.com/antavelos/blockchain/src/internal/pkg/clients/node"
 	bc "github.com/antavelos/blockchain/src/internal/pkg/models/blockchain"
 	w "github.com/antavelos/blockchain/src/internal/pkg/models/wallet"
-	repo "github.com/antavelos/blockchain/src/internal/pkg/repos/wallet"
+	repo "github.com/antavelos/blockchain/src/internal/pkg/repos"
 	cfg "github.com/antavelos/blockchain/src/pkg/config"
 	"github.com/antavelos/blockchain/src/pkg/db"
 	"github.com/antavelos/blockchain/src/pkg/utils"

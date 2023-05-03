@@ -1,4 +1,4 @@
-package repowallet
+package repos
 
 import (
 	"encoding/json"

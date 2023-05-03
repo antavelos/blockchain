@@ -1,4 +1,4 @@
-package reponode
+package repos
 
 import (
 	"encoding/json"

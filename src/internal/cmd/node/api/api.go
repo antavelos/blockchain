@@ -6,11 +6,10 @@ import (
 	"github.com/antavelos/blockchain/src/internal/cmd/node/events"
 	bc "github.com/antavelos/blockchain/src/internal/pkg/models/blockchain"
 	nd "github.com/antavelos/blockchain/src/internal/pkg/models/node"
+	rep "github.com/antavelos/blockchain/src/internal/pkg/repos"
 	"github.com/antavelos/blockchain/src/pkg/eventbus"
 	"github.com/antavelos/blockchain/src/pkg/utils"
 
-	bc_repo "github.com/antavelos/blockchain/src/internal/pkg/repos/blockchain"
-	node_repo "github.com/antavelos/blockchain/src/internal/pkg/repos/node"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,13 +20,12 @@ const pingEndpoint = "/ping"
 const blockchainEndpoint = "/blockchain"
 
 type RouteHandler struct {
-	Bus            *eventbus.Bus
-	BlockchainRepo *bc_repo.BlockchainRepo
-	NodeRepo       *node_repo.NodeRepo
+	Bus   *eventbus.Bus
+	Repos *rep.Repos
 }
 
-func NewRouteHandler(bus *eventbus.Bus, br *bc_repo.BlockchainRepo, nr *node_repo.NodeRepo) *RouteHandler {
-	return &RouteHandler{Bus: bus, BlockchainRepo: br, NodeRepo: nr}
+func NewRouteHandler(bus *eventbus.Bus, repos *rep.Repos) *RouteHandler {
+	return &RouteHandler{Bus: bus, Repos: repos}
 }
 
 func (h *RouteHandler) addSharedBlock(c *gin.Context) {
@@ -38,7 +36,7 @@ func (h *RouteHandler) addSharedBlock(c *gin.Context) {
 		return
 	}
 
-	err := h.BlockchainRepo.AddBlock(block)
+	err := h.Repos.BlockchainRepo.AddBlock(block)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -55,7 +53,7 @@ func (h *RouteHandler) addSharedTx(c *gin.Context) {
 		return
 	}
 
-	tx, err := h.BlockchainRepo.AddTx(tx)
+	tx, err := h.Repos.BlockchainRepo.AddTx(tx)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -77,7 +75,7 @@ func (h *RouteHandler) addTx(c *gin.Context) {
 		return
 	}
 
-	tx, err := h.BlockchainRepo.AddTx(tx)
+	tx, err := h.Repos.BlockchainRepo.AddTx(tx)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -88,7 +86,7 @@ func (h *RouteHandler) addTx(c *gin.Context) {
 }
 
 func (h *RouteHandler) getBlockchain(c *gin.Context) {
-	blockchain, err := h.BlockchainRepo.GetBlockchain()
+	blockchain, err := h.Repos.BlockchainRepo.GetBlockchain()
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "blockchain currently not available"})
 		return
@@ -105,14 +103,14 @@ func (h *RouteHandler) ping(c *gin.Context) {
 	}
 	utils.LogInfo("Ping from", node.GetHost())
 
-	err := h.NodeRepo.AddNode(node)
+	err := h.Repos.NodeRepo.AddNode(node)
 	if err != nil {
 		utils.LogError(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	nodes, err := h.NodeRepo.GetNodes()
+	nodes, err := h.Repos.NodeRepo.GetNodes()
 	if err != nil {
 		utils.LogError(err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

@@ -8,27 +8,23 @@ import (
 	"github.com/antavelos/blockchain/src/internal/cmd/node/events"
 	node_client "github.com/antavelos/blockchain/src/internal/pkg/clients/node"
 	bc "github.com/antavelos/blockchain/src/internal/pkg/models/blockchain"
-	bc_repo "github.com/antavelos/blockchain/src/internal/pkg/repos/blockchain"
-	node_repo "github.com/antavelos/blockchain/src/internal/pkg/repos/node"
-	wallet_repo "github.com/antavelos/blockchain/src/internal/pkg/repos/wallet"
+	rep "github.com/antavelos/blockchain/src/internal/pkg/repos"
 	"github.com/antavelos/blockchain/src/pkg/eventbus"
 	"github.com/antavelos/blockchain/src/pkg/utils"
 )
 
 type MineHandler struct {
-	Bus            *eventbus.Bus
-	Config         *cfg.Config
-	BlockchainRepo *bc_repo.BlockchainRepo
-	NodeRepo       *node_repo.NodeRepo
-	WalletRepo     *wallet_repo.WalletRepo
+	Bus    *eventbus.Bus
+	Config *cfg.Config
+	Repos  *rep.Repos
 }
 
-func NewMineHandler(bus *eventbus.Bus, config *cfg.Config, br *bc_repo.BlockchainRepo, nr *node_repo.NodeRepo, wr *wallet_repo.WalletRepo) *MineHandler {
-	return &MineHandler{Bus: bus, Config: config, BlockchainRepo: br, NodeRepo: nr, WalletRepo: wr}
+func NewMineHandler(bus *eventbus.Bus, config *cfg.Config, repos *rep.Repos) *MineHandler {
+	return &MineHandler{Bus: bus, Config: config, Repos: repos}
 }
 
 func (h *MineHandler) shareBlock(block bc.Block) error {
-	nodes, err := h.NodeRepo.GetNodes()
+	nodes, err := h.Repos.NodeRepo.GetNodes()
 	if err != nil {
 		return utils.GenericError{Msg: "failed to share new block"}
 	}
@@ -52,7 +48,7 @@ func (h *MineHandler) shareBlock(block bc.Block) error {
 }
 
 func (h *MineHandler) mine() (bc.Block, error) {
-	blockchain, err := h.BlockchainRepo.GetBlockchain()
+	blockchain, err := h.Repos.BlockchainRepo.GetBlockchain()
 
 	if err != nil {
 		return bc.Block{}, utils.GenericError{Msg: "blockchain currently not available"}
@@ -83,7 +79,7 @@ func (h *MineHandler) mine() (bc.Block, error) {
 		return bc.Block{}, err
 	}
 
-	err = h.BlockchainRepo.ReplaceBlockchain(*blockchain)
+	err = h.Repos.BlockchainRepo.ReplaceBlockchain(*blockchain)
 	if err != nil {
 		return bc.Block{}, utils.GenericError{Msg: "failed to update blockchain"}
 	}

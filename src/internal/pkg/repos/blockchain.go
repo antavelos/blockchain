@@ -1,4 +1,4 @@
-package repoblockchain
+package repos
 
 import (
 	"encoding/json"

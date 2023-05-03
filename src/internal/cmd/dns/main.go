@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	repo "github.com/antavelos/blockchain/src/internal/pkg/repos/node"
+	repo "github.com/antavelos/blockchain/src/internal/pkg/repos"
 	cfg "github.com/antavelos/blockchain/src/pkg/config"
 	"github.com/antavelos/blockchain/src/pkg/db"
 	"github.com/antavelos/blockchain/src/pkg/utils"
