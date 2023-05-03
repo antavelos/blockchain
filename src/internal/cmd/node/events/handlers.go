@@ -1,10 +1,9 @@
-package eventhandlers
+package events
 
 import (
 	"fmt"
 
 	cfg "github.com/antavelos/blockchain/src/internal/cmd/node/config"
-	"github.com/antavelos/blockchain/src/internal/cmd/node/events"
 	dns_client "github.com/antavelos/blockchain/src/internal/pkg/clients/dns"
 	node_client "github.com/antavelos/blockchain/src/internal/pkg/clients/node"
 	wallet_client "github.com/antavelos/blockchain/src/internal/pkg/clients/wallet"
@@ -119,7 +118,7 @@ func (h EventHandler) pingNodes() error {
 	responses := node_client.PingNodes(nodes, selfNode)
 
 	if responses.HasConnectionRefused() {
-		h.Bus.Handle(eventbus.DataEvent{Ev: events.ConnectionRefusedEvent})
+		h.Bus.Handle(eventbus.DataEvent{Ev: ConnectionRefusedEvent})
 	}
 
 	if responses.ErrorsRatio() < 1 {
@@ -136,7 +135,7 @@ func (h EventHandler) getBlockchains(nodes []nd.Node) []*bc.Blockchain {
 	responses := node_client.GetBlockchains(nodes)
 
 	if responses.HasConnectionRefused() {
-		h.Bus.Handle(eventbus.DataEvent{Ev: events.ConnectionRefusedEvent})
+		h.Bus.Handle(eventbus.DataEvent{Ev: ConnectionRefusedEvent})
 	}
 
 	noErrorResponses := utils.Filter(responses, func(response rest.Response) bool {
@@ -280,11 +279,11 @@ func NewEventBus(config *cfg.Config, repos *rep.Repos) *eventbus.Bus {
 
 	eh := EventHandler{Bus: bus, Config: config, Repos: repos}
 
-	bus.RegisterEventHandler(events.InitNodeEvent, eh.HandleInitNode)
-	bus.RegisterEventHandler(events.TransactionReceivedEvent, eh.HandleTransactionReceivedEvent)
-	bus.RegisterEventHandler(events.BlockMinedEvent, eh.HandleBlockMinedEvent)
-	bus.RegisterEventHandler(events.BlockMiningFailedEvent, eh.HandleBlockMiningFailedEvent)
-	bus.RegisterEventHandler(events.ConnectionRefusedEvent, eh.HandleConnectionRefusedEvent)
+	bus.RegisterEventHandler(InitNodeEvent, eh.HandleInitNode)
+	bus.RegisterEventHandler(TransactionReceivedEvent, eh.HandleTransactionReceivedEvent)
+	bus.RegisterEventHandler(BlockMinedEvent, eh.HandleBlockMinedEvent)
+	bus.RegisterEventHandler(BlockMiningFailedEvent, eh.HandleBlockMiningFailedEvent)
+	bus.RegisterEventHandler(ConnectionRefusedEvent, eh.HandleConnectionRefusedEvent)
 
 	return bus
 }

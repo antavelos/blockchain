@@ -6,7 +6,6 @@ import (
 
 	"github.com/antavelos/blockchain/src/internal/cmd/node/api"
 	cfg "github.com/antavelos/blockchain/src/internal/cmd/node/config"
-	"github.com/antavelos/blockchain/src/internal/cmd/node/eventhandlers"
 	"github.com/antavelos/blockchain/src/internal/cmd/node/events"
 	"github.com/antavelos/blockchain/src/internal/cmd/node/miner"
 	rep "github.com/antavelos/blockchain/src/internal/pkg/repos"
@@ -29,7 +28,7 @@ func main() {
 		WalletFilename:     config.Get("WALLETS_FILENAME"),
 	})
 
-	bus := eventhandlers.NewEventBus(config, repos)
+	bus := events.NewEventBus(config, repos)
 
 	bus.Handle(eventbus.DataEvent{Ev: events.InitNodeEvent})
 
