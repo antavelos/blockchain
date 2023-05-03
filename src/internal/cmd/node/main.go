@@ -5,21 +5,20 @@ import (
 	"fmt"
 
 	"github.com/antavelos/blockchain/src/internal/cmd/node/api"
-	"github.com/antavelos/blockchain/src/internal/cmd/node/common"
 	cfg "github.com/antavelos/blockchain/src/internal/cmd/node/config"
 	"github.com/antavelos/blockchain/src/internal/cmd/node/eventhandlers"
+	"github.com/antavelos/blockchain/src/internal/cmd/node/events"
 	"github.com/antavelos/blockchain/src/internal/cmd/node/miner"
 	bc_repo "github.com/antavelos/blockchain/src/internal/pkg/repos/blockchain"
 	node_repo "github.com/antavelos/blockchain/src/internal/pkg/repos/node"
 	wallet_repo "github.com/antavelos/blockchain/src/internal/pkg/repos/wallet"
 	"github.com/antavelos/blockchain/src/pkg/db"
+	"github.com/antavelos/blockchain/src/pkg/eventbus"
 	"github.com/antavelos/blockchain/src/pkg/utils"
 )
 
 func main() {
-	mine := flag.Bool("mine", false, "Indicates whether it will run as miner")
-	init := flag.Bool("init", false, "Initialises the blockchain. Existing blockchain will be overriden. Overrules other options.")
-
+	mine := flag.Bool("mine", false, "Indicates whether it will run as well as miner")
 	flag.Parse()
 
 	config, err := cfg.NewConfig()
@@ -31,22 +30,12 @@ func main() {
 	nodeRepo := node_repo.NewNodeRepo(db.NewDB(config.Get("NODES_FILENAME")))
 	walletRepo := wallet_repo.NewWalletRepo(db.NewDB(config.Get("WALLETS_FILENAME")))
 
-	commonHandler := common.NewCommonHandler(config, blockchainRepo, nodeRepo, walletRepo)
-	bus := eventhandlers.NewEventBus(config, commonHandler, blockchainRepo, nodeRepo, walletRepo)
+	bus := eventhandlers.NewEventBus(config, blockchainRepo, nodeRepo, walletRepo)
 
-	if *init {
-		if _, err := blockchainRepo.CreateBlockchain(); err != nil {
-			utils.LogFatal("failed to create blockchain", err.Error())
-		}
-	}
-
-	err = commonHandler.InitNode()
-	if err != nil {
-		utils.LogFatal(err.Error())
-	}
+	bus.Handle(eventbus.DataEvent{Ev: events.InitNodeEvent})
 
 	if *mine {
-		mineHandler := miner.NewMineHandler(bus, config, commonHandler, blockchainRepo, nodeRepo, walletRepo)
+		mineHandler := miner.NewMineHandler(bus, config, blockchainRepo, nodeRepo, walletRepo)
 		go mineHandler.RunLoop()
 	}
 

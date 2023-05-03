@@ -5,7 +5,9 @@ import (
 )
 
 const (
-	TransactionReceivedEvent eventbus.Event = iota
-	BlockMinedEvent
-	ConnectionRefusedEvent
+	InitNodeEvent            eventbus.Event = "InitNodeEvent"
+	TransactionReceivedEvent eventbus.Event = "TransactionReceivedEvent"
+	BlockMinedEvent          eventbus.Event = "BlockMinedEvent"
+	BlockMiningFailedEvent   eventbus.Event = "BlockMiningFailedEvent"
+	ConnectionRefusedEvent   eventbus.Event = "ConnectionRefusedEvent"
 )

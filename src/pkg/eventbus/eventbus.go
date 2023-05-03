@@ -1,8 +1,12 @@
 package eventbus
 
-import "github.com/antavelos/blockchain/src/pkg/utils"
+import (
+	"fmt"
 
-type Event int
+	"github.com/antavelos/blockchain/src/pkg/utils"
+)
+
+type Event string
 
 type DataEvent struct {
 	Ev   Event
@@ -28,6 +32,6 @@ func (b *Bus) Handle(de DataEvent) {
 	if !ok {
 		utils.LogError("event handler not available")
 	}
-
+	utils.LogInfo(fmt.Sprintf("Handling '%v' event", de.Ev))
 	go handler(de)
 }

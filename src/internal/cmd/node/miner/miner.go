@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/antavelos/blockchain/src/internal/cmd/node/common"
 	cfg "github.com/antavelos/blockchain/src/internal/cmd/node/config"
 	"github.com/antavelos/blockchain/src/internal/cmd/node/events"
 	node_client "github.com/antavelos/blockchain/src/internal/pkg/clients/node"
@@ -19,14 +18,13 @@ import (
 type MineHandler struct {
 	Bus            *eventbus.Bus
 	Config         *cfg.Config
-	CommonHandler  *common.CommonHandler
 	BlockchainRepo *bc_repo.BlockchainRepo
 	NodeRepo       *node_repo.NodeRepo
 	WalletRepo     *wallet_repo.WalletRepo
 }
 
-func NewMineHandler(bus *eventbus.Bus, config *cfg.Config, com *common.CommonHandler, br *bc_repo.BlockchainRepo, nr *node_repo.NodeRepo, wr *wallet_repo.WalletRepo) *MineHandler {
-	return &MineHandler{Bus: bus, Config: config, CommonHandler: com, BlockchainRepo: br, NodeRepo: nr, WalletRepo: wr}
+func NewMineHandler(bus *eventbus.Bus, config *cfg.Config, br *bc_repo.BlockchainRepo, nr *node_repo.NodeRepo, wr *wallet_repo.WalletRepo) *MineHandler {
+	return &MineHandler{Bus: bus, Config: config, BlockchainRepo: br, NodeRepo: nr, WalletRepo: wr}
 }
 
 func (h *MineHandler) shareBlock(block bc.Block) error {
@@ -38,7 +36,6 @@ func (h *MineHandler) shareBlock(block bc.Block) error {
 	responses := node_client.ShareBlock(nodes, block)
 
 	if responses.HasConnectionRefused() {
-		utils.LogInfo("Refresing DNS nodes")
 		h.Bus.Handle(eventbus.DataEvent{Ev: events.ConnectionRefusedEvent})
 	}
 
@@ -99,13 +96,7 @@ func (h *MineHandler) RunLoop() {
 		block, err := h.mine()
 		if err != nil {
 			utils.LogError("New block [FAIL]", err.Error())
-
-			utils.LogInfo("Resolving longest blockchain")
-			err := h.CommonHandler.ResolveLongestBlockchain()
-			if err != nil {
-				utils.LogError("Failed to resolve longest blockchain", err.Error())
-			}
-
+			h.Bus.Handle(eventbus.DataEvent{Ev: events.BlockMiningFailedEvent})
 		} else {
 			utils.LogInfo("New block [OK]", block.Idx)
 			h.Bus.Handle(eventbus.DataEvent{Ev: events.BlockMinedEvent})
