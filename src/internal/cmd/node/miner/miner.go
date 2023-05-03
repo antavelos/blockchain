@@ -13,18 +13,18 @@ import (
 	"github.com/antavelos/blockchain/src/pkg/utils"
 )
 
-type MineHandler struct {
+type Miner struct {
 	Bus    *eventbus.Bus
 	Config *cfg.Config
 	Repos  *rep.Repos
 }
 
-func NewMineHandler(bus *eventbus.Bus, config *cfg.Config, repos *rep.Repos) *MineHandler {
-	return &MineHandler{Bus: bus, Config: config, Repos: repos}
+func NewMiner(bus *eventbus.Bus, config *cfg.Config, repos *rep.Repos) *Miner {
+	return &Miner{Bus: bus, Config: config, Repos: repos}
 }
 
-func (h *MineHandler) shareBlock(block bc.Block) error {
-	nodes, err := h.Repos.NodeRepo.GetNodes()
+func (m *Miner) shareBlock(block bc.Block) error {
+	nodes, err := m.Repos.NodeRepo.GetNodes()
 	if err != nil {
 		return utils.GenericError{Msg: "failed to share new block"}
 	}
@@ -32,7 +32,7 @@ func (h *MineHandler) shareBlock(block bc.Block) error {
 	responses := node_client.ShareBlock(nodes, block)
 
 	if responses.HasConnectionRefused() {
-		h.Bus.Handle(eventbus.DataEvent{Ev: events.ConnectionRefusedEvent})
+		m.Bus.Handle(eventbus.DataEvent{Ev: events.ConnectionRefusedEvent})
 	}
 
 	if responses.ErrorsRatio() > 0 {
@@ -47,8 +47,8 @@ func (h *MineHandler) shareBlock(block bc.Block) error {
 	return nil
 }
 
-func (h *MineHandler) mine() (bc.Block, error) {
-	blockchain, err := h.Repos.BlockchainRepo.GetBlockchain()
+func (m *Miner) mine() (bc.Block, error) {
+	blockchain, err := m.Repos.BlockchainRepo.GetBlockchain()
 
 	if err != nil {
 		return bc.Block{}, utils.GenericError{Msg: "blockchain currently not available"}
@@ -58,18 +58,18 @@ func (h *MineHandler) mine() (bc.Block, error) {
 		return bc.Block{}, utils.GenericError{Msg: "no pending transactions found"}
 	}
 
-	block, err := blockchain.NewBlock(h.Config.DefaultTxsPerBlock)
+	block, err := blockchain.NewBlock(m.Config.DefaultTxsPerBlock)
 	if err != nil {
 		return bc.Block{}, err
 	}
 
 	utils.LogInfo("Mining...")
-	for !block.IsValid(h.Config.DefaultMiningDifficulty) {
+	for !block.IsValid(m.Config.DefaultMiningDifficulty) {
 		block.Nonce += 1
 	}
 	utils.LogInfo("New block mined with nonce", block.Nonce)
 
-	err = h.shareBlock(block)
+	err = m.shareBlock(block)
 	if err != nil {
 		return bc.Block{}, err
 	}
@@ -79,7 +79,7 @@ func (h *MineHandler) mine() (bc.Block, error) {
 		return bc.Block{}, err
 	}
 
-	err = h.Repos.BlockchainRepo.ReplaceBlockchain(*blockchain)
+	err = m.Repos.BlockchainRepo.ReplaceBlockchain(*blockchain)
 	if err != nil {
 		return bc.Block{}, utils.GenericError{Msg: "failed to update blockchain"}
 	}
@@ -87,15 +87,15 @@ func (h *MineHandler) mine() (bc.Block, error) {
 	return block, nil
 }
 
-func (h *MineHandler) RunLoop() {
+func (m *Miner) Run() {
 	for {
-		block, err := h.mine()
+		block, err := m.mine()
 		if err != nil {
 			utils.LogError("New block [FAIL]", err.Error())
-			h.Bus.Handle(eventbus.DataEvent{Ev: events.BlockMiningFailedEvent})
+			m.Bus.Handle(eventbus.DataEvent{Ev: events.BlockMiningFailedEvent})
 		} else {
 			utils.LogInfo("New block [OK]", block.Idx)
-			h.Bus.Handle(eventbus.DataEvent{Ev: events.BlockMinedEvent})
+			m.Bus.Handle(eventbus.DataEvent{Ev: events.BlockMinedEvent})
 		}
 
 		time.Sleep(5 * time.Second)

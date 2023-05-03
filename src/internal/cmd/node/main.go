@@ -34,8 +34,8 @@ func main() {
 	bus.Handle(eventbus.DataEvent{Ev: events.InitNodeEvent})
 
 	if *mine {
-		mineHandler := miner.NewMineHandler(bus, config, repos)
-		go mineHandler.RunLoop()
+		miner := miner.NewMiner(bus, config, repos)
+		go miner.Run()
 	}
 
 	// TODO: add a periodic longest blockchain resolve
