@@ -1,18 +1,25 @@
-package main
+package walletapi
 
 import (
 	"net/http"
 
+	"github.com/antavelos/blockchain/src/internal/pkg/repos"
 	"github.com/antavelos/blockchain/src/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
 
 const NewWalletEndpoint = "/wallets/new"
 
-func apiNewWallet(c *gin.Context) {
-	wrepo := getWalletRepo()
+type RouteHandler struct {
+	WalletRepo *repos.WalletRepo
+}
 
-	wallet, err := wrepo.CreateWallet()
+func NewRouteHandler(walletRepo *repos.WalletRepo) *RouteHandler {
+	return &RouteHandler{WalletRepo: walletRepo}
+}
+
+func (h RouteHandler) apiNewWallet(c *gin.Context) {
+	wallet, err := h.WalletRepo.CreateWallet()
 	if err != nil {
 		utils.LogError("New wallet [FAIL]", err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "failed to create new wallet"})
@@ -22,12 +29,12 @@ func apiNewWallet(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, wallet)
 }
 
-func InitRouter() *gin.Engine {
+func (h *RouteHandler) InitRouter() *gin.Engine {
 	router := gin.Default()
 
 	router.SetTrustedProxies([]string{"localhost", "127.0.0.1"})
 
-	router.GET(NewWalletEndpoint, apiNewWallet)
+	router.GET(NewWalletEndpoint, h.apiNewWallet)
 
 	return router
 }

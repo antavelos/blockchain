@@ -24,10 +24,6 @@ func getDB() *db.DB {
 	return _db
 }
 
-func getNodeRepo() *repo.NodeRepo {
-	return repo.NewNodeRepo(getDB())
-}
-
 func main() {
 
 	var err error
@@ -36,7 +32,10 @@ func main() {
 		utils.LogFatal("Configuration error", err.Error())
 	}
 
-	router := InitRouter()
+	nodeRepo := repo.NewNodeRepo(getDB())
 
+	routeHandler := NewRouteHandler(nodeRepo)
+
+	router := routeHandler.InitRouter()
 	router.Run(fmt.Sprintf(":%v", config["PORT"]))
 }
