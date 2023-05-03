@@ -15,6 +15,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	TemplatesFolder = "internal/cmd/admin/templates/*"
+	IndexEndpoint   = "/"
+)
+
 func getDNSHost() string {
 	return fmt.Sprintf("http://%v:%v", config["DNS_HOST"], config["DNS_PORT"])
 }
@@ -71,9 +76,9 @@ func initRouter() *gin.Engine {
 
 	router.SetTrustedProxies([]string{"localhost", "127.0.0.1"})
 
-	router.LoadHTMLGlob("cmd/admin/templates/*")
+	router.LoadHTMLGlob(TemplatesFolder)
 
-	router.GET("/", index)
+	router.GET(IndexEndpoint, index)
 
 	return router
 }

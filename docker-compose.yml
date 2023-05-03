@@ -42,7 +42,6 @@ services:
     depends_on:
       - dns
       - wallets
-      # - node-server-1
     ports:
       - 3002:3002
     environment:
@@ -64,7 +63,6 @@ services:
     depends_on:
       - dns
       - wallets
-      # - node-server-2
     ports:
       - 3003:3003
     environment:
@@ -86,7 +84,6 @@ services:
     depends_on:
       - dns
       - wallets
-      # - node-server-3
     ports:
       - 3004:3004
     environment:
@@ -108,7 +105,6 @@ services:
     depends_on:
       - dns
       - wallets
-      # - node-server-4
     ports:
       - 3005:3005
     environment:
